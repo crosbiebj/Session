@@ -63,10 +63,14 @@ personal/free-text for now, not a shared global table yet).
 ## 3. Phase 1 Feature Set
 
 ### Catch logging
-Species scope: carp-focused (common/mirror/linear/fully scaled/leather/grass
-as sub-types, kept as flat sibling options for one-tap selection rather than
-nested under mirror) but any species loggable (pike, bream, tench, etc. as
-extras).
+Species scope: carp only, deliberately. Session is carp anglers' best
+friend, not a generic multi-species logbook — adding other species would
+dilute the cultural niche this app is built for. Sub-types: common /
+mirror / linear / fully scaled / leather / grass / koi / ghost, kept as
+flat sibling options for one-tap selection rather than nested under mirror.
+No species field needed anywhere in the schema — carp is implicit
+throughout.
+
 
 Units: weight stored internally in grams (integer, unit-agnostic). Display
 defaults to **lb/oz** (UK carp scene convention) with a settings toggle to
@@ -92,9 +96,10 @@ overwhelming.
 - Swim/peg name
 
 **🐟 Fish details (tile):**
-- Species (carp default, others selectable)
-- Sub-type — common/mirror/linear/fully scaled/leather/grass (carp only)
-- Length, girth
+- Sub-type — common / mirror / linear / fully scaled / leather / grass /
+  koi / ghost
+
+
 
 **🎣 Tackle (tile):**
 - Rig used (free text or saved rig presets the angler can reuse)
