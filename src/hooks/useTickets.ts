@@ -49,3 +49,17 @@ export function useCreateTicket() {
     },
   });
 }
+
+export function useUpdateTicketStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; status: 'held' | 'wanted' }) => {
+      const { error } = await supabase.from('tickets').update({ status: input.status }).eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+  });
+}

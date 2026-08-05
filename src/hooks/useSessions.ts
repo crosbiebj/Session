@@ -16,6 +16,62 @@ export function useSessions() {
   });
 }
 
+export function useSession(id: string | undefined) {
+  return useQuery({
+    queryKey: ['sessions', 'detail', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, lakes(id, name)')
+        .eq('id', id as string)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useUpdateSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      plannedStart: Date;
+      plannedEnd: Date;
+      notes: string | null;
+    }) => {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          planned_start: input.plannedStart.toISOString(),
+          planned_end: input.plannedEnd.toISOString(),
+          notes: input.notes,
+        })
+        .eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
+export function useDeleteSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('sessions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
 export function useCreateSession() {
   const queryClient = useQueryClient();
 

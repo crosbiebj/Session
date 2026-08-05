@@ -48,3 +48,20 @@ export function useCreateTarget() {
     },
   });
 }
+
+export function useSetTargetAchieved() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; achieved: boolean }) => {
+      const { error } = await supabase
+        .from('targets')
+        .update({ achieved_at: input.achieved ? new Date().toISOString() : null })
+        .eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['targets'] });
+    },
+  });
+}

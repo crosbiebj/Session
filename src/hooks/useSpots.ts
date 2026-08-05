@@ -83,3 +83,24 @@ export function useCreateSpot() {
     },
   });
 }
+
+// Direct spot sharing (Section 3, Sharing model tier 3) — distinct from
+// visibility='group', which is always tied to the lake's own group. This
+// targets one specific friend regardless of which lake/group the spot
+// belongs to.
+export function useShareSpotWithFriend() {
+  return useMutation({
+    mutationFn: async (input: { spotId: string; friendUserId: string }) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error('Not signed in');
+
+      const { error } = await supabase.from('shared_items').insert({
+        owner_id: userData.user.id,
+        spot_id: input.spotId,
+        shared_with_user_id: input.friendUserId,
+      });
+
+      if (error) throw error;
+    },
+  });
+}

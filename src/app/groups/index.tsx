@@ -1,7 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,15 +21,26 @@ export default function Groups() {
   const { data: groups, isLoading } = useGroups();
   const createGroup = useCreateGroup();
   const [newName, setNewName] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await createGroup.mutateAsync(newName.trim());
-    setNewName('');
+    setError(null);
+    try {
+      await createGroup.mutateAsync(newName.trim());
+      setNewName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create that group.');
+    }
   };
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        className="flex-1"
+      >
       <View className="flex-row items-center justify-between px-5 py-3">
         <Pressable
           onPress={() => router.back()}
@@ -71,22 +91,26 @@ export default function Groups() {
         />
       )}
 
-      <View className="flex-row gap-2 border-t border-dock-border px-5 py-4">
-        <TextInput
-          value={newName}
-          onChangeText={setNewName}
-          placeholder="New group name"
-          placeholderTextColor="#5C6154"
-          className="flex-1 rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
-        />
-        <AnimatedPressable
-          onPress={handleAdd}
-          disabled={createGroup.isPending}
-          className="items-center justify-center rounded-lg bg-dock-moss px-5 disabled:opacity-60"
-        >
-          <Text className="font-sans-semibold text-base text-dock-text">Create</Text>
-        </AnimatedPressable>
+      <View className="gap-2 border-t border-dock-border px-5 py-4">
+        {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
+        <View className="flex-row gap-2">
+          <TextInput
+            value={newName}
+            onChangeText={setNewName}
+            placeholder="New group name"
+            placeholderTextColor="#5C6154"
+            className="flex-1 rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
+          />
+          <AnimatedPressable
+            onPress={handleAdd}
+            disabled={createGroup.isPending}
+            className="items-center justify-center rounded-lg bg-dock-moss px-5 disabled:opacity-60"
+          >
+            <Text className="font-sans-semibold text-base text-dock-text">Create</Text>
+          </AnimatedPressable>
+        </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,6 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useCreateLake, useLakes } from '@/hooks/useLakes';
@@ -28,21 +37,29 @@ export function LakePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [newLakeName, setNewLakeName] = useState('');
-  const [pinLocation, setPinLocation] = useState(true);
+  // Defaults off — see lakes/index.tsx for why: a lake shouldn't get
+  // geo-tagged to wherever the angler happens to be unless they say so.
+  const [pinLocation, setPinLocation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { data: lakes, isLoading } = useLakes();
   const { coords, loading: locationLoading, refetch: refetchLocation } = useCurrentLocation();
   const createLake = useCreateLake();
 
   const handleCreate = async () => {
     if (!newLakeName.trim()) return;
-    const lake = await createLake.mutateAsync({
-      name: newLakeName.trim(),
-      latitude: pinLocation ? coords?.latitude : undefined,
-      longitude: pinLocation ? coords?.longitude : undefined,
-    });
-    setNewLakeName('');
-    onSelect(lake);
-    setOpen(false);
+    setError(null);
+    try {
+      const lake = await createLake.mutateAsync({
+        name: newLakeName.trim(),
+        latitude: pinLocation ? coords?.latitude : undefined,
+        longitude: pinLocation ? coords?.longitude : undefined,
+      });
+      setNewLakeName('');
+      onSelect(lake);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add that lake.');
+    }
   };
 
   const dock = variant === 'dock';
@@ -63,7 +80,10 @@ export function LakePicker({
       </Pressable>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View className={dock ? 'flex-1 bg-dock-bg px-5 pt-16' : 'flex-1 bg-cream px-5 pt-16'}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className={dock ? 'flex-1 bg-dock-bg px-5 pt-16' : 'flex-1 bg-cream px-5 pt-16'}
+        >
           <Text
             className={
               dock
@@ -123,6 +143,7 @@ export function LakePicker({
                 Pin my current location{locationLoading ? ' (finding you…)' : ''}
               </Text>
             </Pressable>
+            {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
             <View className="flex-row gap-2">
               <TextInput
                 value={newLakeName}
@@ -152,7 +173,7 @@ export function LakePicker({
               Close
             </Text>
           </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

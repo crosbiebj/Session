@@ -304,14 +304,26 @@ GPS-anchored precision upgrade stays Phase 3.
   count was measured against; a wrap only means a fixed distance once
   you know the rod, since a 9ft rod's wrap covers less line than a 13ft
   rod's), distance_wraps (nullable), distance_estimate_m (nullable —
-  angler uses whichever method suits), depth_m (nullable), bottom_type
-  (nullable — silt/choddy/weed/gravel/clay/sand via chip picker), notes
-  (nullable), visibility (private | group).
+  angler uses whichever method suits), depth_m (nullable — stored in
+  metres regardless of which unit the angler typed; the form has a ft/m
+  toggle next to the field, converting on save so the column stays
+  unit-agnostic like `catches.weight_grams`), bottom_type (nullable — a
+  chip picker, silt/choddy/weed/gravel/clay/sand, **multi-select**: a real
+  lakebed is often a mix, stored as a comma-joined string rather than one
+  value), notes (nullable), visibility (private | group).
 - **Defaults to private**, same caution as `known_fish.visibility` — the
   angler consciously opts a specific spot into `group` visibility rather
   than every spot on a shared lake being exposed by default. `group`
   visibility only makes sense (and is only allowed) on a group-owned lake;
   a spot on a personal lake can only ever be private.
+- **Direct sharing (tier 3) also applies to spots.** A spot's Share
+  setting is a three-way choice — Private / A friend / The group (the
+  last option only offered on a group-owned lake, and *is* the
+  `visibility='group'` mechanism above). "A friend" is different: it
+  targets one specific person regardless of the lake's own group,
+  reusing `shared_items` (previously catch-only — `catch_id` is now
+  nullable, a `spot_id` column carries the spot case) rather than a
+  second visibility enum. `can_view_spot` checks both paths.
 - Only the lake's group members can add spots to a group lake (or, for a
   personal lake, only its owner) — same access rule as adding known fish.
 - A spot's creator can edit/delete their own spot; no separate moderation

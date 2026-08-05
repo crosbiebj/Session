@@ -17,20 +17,30 @@ export default function Sessions() {
   const [showAdd, setShowAdd] = useState(false);
   const [lake, setLake] = useState<Lake | null>(null);
   const [start, setStart] = useState(new Date());
+  const [end, setEnd] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!lake) return;
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000); // default 24h
-    await createSession.mutateAsync({
-      lakeId: lake.id,
-      plannedStart: start,
-      plannedEnd: end,
-      notes: notes.trim() || null,
-    });
-    setLake(null);
-    setNotes('');
-    setShowAdd(false);
+    setError(null);
+    if (end <= start) {
+      setError('End time needs to be after the start time.');
+      return;
+    }
+    try {
+      await createSession.mutateAsync({
+        lakeId: lake.id,
+        plannedStart: start,
+        plannedEnd: end,
+        notes: notes.trim() || null,
+      });
+      setLake(null);
+      setNotes('');
+      setShowAdd(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not plan that session.');
+    }
   };
 
   return (
@@ -57,14 +67,36 @@ export default function Sessions() {
 
       {showAdd ? (
         <View className="gap-3 border-b border-dock-border px-5 py-4">
-          <LakePicker selectedLake={lake} onSelect={setLake} />
+          <LakePicker selectedLake={lake} onSelect={setLake} variant="dock" />
+
+          <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+            Starts
+          </Text>
           <DateTimePicker
             value={start}
             mode="datetime"
             display={Platform.OS === 'ios' ? 'compact' : 'default'}
-            onChange={(_e, d) => d && setStart(d)}
+            onChange={(_e, d) => {
+              if (!d) return;
+              setStart(d);
+              // Keep end from silently sitting before the new start.
+              if (end <= d) setEnd(new Date(d.getTime() + 24 * 60 * 60 * 1000));
+            }}
             themeVariant="dark"
           />
+
+          <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+            Ends
+          </Text>
+          <DateTimePicker
+            value={end}
+            mode="datetime"
+            display={Platform.OS === 'ios' ? 'compact' : 'default'}
+            minimumDate={start}
+            onChange={(_e, d) => d && setEnd(d)}
+            themeVariant="dark"
+          />
+
           <TextInput
             value={notes}
             onChangeText={setNotes}
@@ -72,12 +104,19 @@ export default function Sessions() {
             placeholderTextColor="#5C6154"
             className="rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
           />
+
+          {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
+
           <AnimatedPressable
             onPress={handleAdd}
             disabled={!lake || createSession.isPending}
             className="items-center rounded-lg bg-dock-moss py-3 disabled:opacity-40"
           >
-            <Text className="font-sans-semibold text-base text-dock-text">Plan Session</Text>
+            {createSession.isPending ? (
+              <ActivityIndicator color="#EDEBE0" />
+            ) : (
+              <Text className="font-sans-semibold text-base text-dock-text">Plan Session</Text>
+            )}
           </AnimatedPressable>
         </View>
       ) : null}
@@ -95,28 +134,33 @@ export default function Sessions() {
             <Text className="font-sans text-sm text-dock-text-faint">No sessions planned yet.</Text>
           }
           renderItem={({ item, index }) => (
-            <Animated.View
-              entering={FadeInDown.duration(300).delay(Math.min(index, 8) * 30)}
-              className="rounded-xl bg-dock-panel px-4 py-3.5"
-            >
-              <Text className="font-sans-medium text-base text-dock-text">
-                {item.lakes?.name ?? 'Lake TBC'}
-              </Text>
-              <Text className="mt-0.5 font-sans text-xs text-dock-text-faint">
-                {new Date(item.planned_start).toLocaleDateString(undefined, {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}{' '}
-                –{' '}
-                {new Date(item.planned_end).toLocaleDateString(undefined, {
-                  day: 'numeric',
-                  month: 'short',
-                })}
-              </Text>
-              {item.notes ? (
-                <Text className="mt-1 font-sans text-sm text-dock-text-dim">{item.notes}</Text>
-              ) : null}
+            <Animated.View entering={FadeInDown.duration(300).delay(Math.min(index, 8) * 30)}>
+              <Pressable
+                onPress={() => router.push(`/sessions/${item.id}`)}
+                className="rounded-xl bg-dock-panel px-4 py-3.5 active:opacity-70"
+              >
+                <View className="flex-row items-center justify-between">
+                  <Text className="font-sans-medium text-base text-dock-text">
+                    {item.lakes?.name ?? 'Lake TBC'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color="#5C6154" />
+                </View>
+                <Text className="mt-0.5 font-sans text-xs text-dock-text-faint">
+                  {new Date(item.planned_start).toLocaleDateString(undefined, {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}{' '}
+                  –{' '}
+                  {new Date(item.planned_end).toLocaleDateString(undefined, {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </Text>
+                {item.notes ? (
+                  <Text className="mt-1 font-sans text-sm text-dock-text-dim">{item.notes}</Text>
+                ) : null}
+              </Pressable>
             </Animated.View>
           )}
         />

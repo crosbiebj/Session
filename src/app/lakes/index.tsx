@@ -1,7 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,23 +25,38 @@ export default function Lakes() {
   const createLake = useCreateLake();
   const { coords, loading: locationLoading, refetch: refetchLocation } = useCurrentLocation();
   const [newName, setNewName] = useState('');
-  const [pinLocation, setPinLocation] = useState(true);
+  // Defaults off — a lake gets pinned to wherever the angler happens to be
+  // when they open the app, which usually isn't the lake itself (adding
+  // one from the sofa shouldn't geo-tag it as your living room). Opt in
+  // deliberately when you're actually there.
+  const [pinLocation, setPinLocation] = useState(false);
   const [ownerGroupId, setOwnerGroupId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await createLake.mutateAsync({
-      name: newName.trim(),
-      latitude: pinLocation ? coords?.latitude : undefined,
-      longitude: pinLocation ? coords?.longitude : undefined,
-      groupId: ownerGroupId,
-    });
-    setNewName('');
-    setOwnerGroupId(null);
+    setError(null);
+    try {
+      await createLake.mutateAsync({
+        name: newName.trim(),
+        latitude: pinLocation ? coords?.latitude : undefined,
+        longitude: pinLocation ? coords?.longitude : undefined,
+        groupId: ownerGroupId,
+      });
+      setNewName('');
+      setOwnerGroupId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add that lake.');
+    }
   };
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        className="flex-1"
+      >
       <View className="flex-row items-center justify-between px-5 py-3">
         <Pressable
           onPress={() => router.back()}
@@ -145,6 +169,8 @@ export default function Lakes() {
           </View>
         ) : null}
 
+        {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
+
         <View className="flex-row gap-2">
           <TextInput
             value={newName}
@@ -162,6 +188,7 @@ export default function Lakes() {
           </AnimatedPressable>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

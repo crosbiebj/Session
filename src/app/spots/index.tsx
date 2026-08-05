@@ -10,12 +10,17 @@ import { LakePicker } from '@/components/LakePicker';
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { RodLengthPicker } from '@/components/RodLengthPicker';
 import { SwimPicker } from '@/components/SwimPicker';
-import { useCreateSpot, useSpots } from '@/hooks/useSpots';
+import { useFriends } from '@/hooks/useFriendships';
+import { useCreateSpot, useShareSpotWithFriend, useSpots } from '@/hooks/useSpots';
 import type { Lake, Swim } from '@/types/database';
+
+type ShareMode = 'private' | 'friend' | 'group';
 
 export default function Spots() {
   const { data: spots, isLoading } = useSpots();
+  const { data: friends } = useFriends();
   const createSpot = useCreateSpot();
+  const shareSpot = useShareSpotWithFriend();
   const [showAdd, setShowAdd] = useState(false);
 
   const [lake, setLake] = useState<Lake | null>(null);
@@ -26,9 +31,12 @@ export default function Spots() {
   const [rodLengthFt, setRodLengthFt] = useState<number | null>(null);
   const [wraps, setWraps] = useState('');
   const [depth, setDepth] = useState('');
-  const [bottomType, setBottomType] = useState<string | null>(null);
+  const [depthUnit, setDepthUnit] = useState<'m' | 'ft'>('m');
+  const [bottomTypes, setBottomTypes] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'group'>('private');
+  const [shareMode, setShareMode] = useState<ShareMode>('private');
+  const [shareFriendId, setShareFriendId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setLake(null);
@@ -39,32 +47,49 @@ export default function Spots() {
     setRodLengthFt(null);
     setWraps('');
     setDepth('');
-    setBottomType(null);
+    setDepthUnit('m');
+    setBottomTypes([]);
     setNotes('');
-    setVisibility('private');
+    setShareMode('private');
+    setShareFriendId(null);
   };
 
   const handleAdd = async () => {
     if (!lake) return;
-    await createSpot.mutateAsync({
-      lakeId: lake.id,
-      swimId: swim?.id ?? null,
-      name: name.trim() || null,
-      farBankMarker: marker.trim() || null,
-      bearingDegrees: bearing ? Math.round(parseFloat(bearing)) : null,
-      rodLengthFt,
-      distanceWraps: wraps ? Math.round(parseFloat(wraps)) : null,
-      distanceEstimateM: null,
-      depthM: depth ? parseFloat(depth) : null,
-      bottomType,
-      notes: notes.trim() || null,
-      // group visibility is only legal on a group-owned lake (RLS
-      // enforces this too) — force private if the lake changed under the
-      // toggle's feet.
-      visibility: lake.group_id && visibility === 'group' ? 'group' : 'private',
-    });
-    resetForm();
-    setShowAdd(false);
+    setError(null);
+    const depthNum = depth ? parseFloat(depth) : null;
+    const depthM = depthNum === null || Number.isNaN(depthNum) ? null : depthUnit === 'ft' ? depthNum * 0.3048 : depthNum;
+    const bearingNum = bearing ? Math.round(parseFloat(bearing)) : null;
+    const wrapsNum = wraps ? Math.round(parseFloat(wraps)) : null;
+
+    try {
+      const spot = await createSpot.mutateAsync({
+        lakeId: lake.id,
+        swimId: swim?.id ?? null,
+        name: name.trim() || null,
+        farBankMarker: marker.trim() || null,
+        bearingDegrees: bearingNum !== null && !Number.isNaN(bearingNum) ? bearingNum : null,
+        rodLengthFt,
+        distanceWraps: wrapsNum !== null && !Number.isNaN(wrapsNum) ? wrapsNum : null,
+        distanceEstimateM: null,
+        depthM,
+        bottomType: bottomTypes.length > 0 ? bottomTypes.join(', ') : null,
+        notes: notes.trim() || null,
+        // group visibility is only legal on a group-owned lake (RLS
+        // enforces this too) — force private if the lake changed under
+        // the toggle's feet.
+        visibility: lake.group_id && shareMode === 'group' ? 'group' : 'private',
+      });
+
+      if (shareMode === 'friend' && shareFriendId) {
+        await shareSpot.mutateAsync({ spotId: spot.id, friendUserId: shareFriendId });
+      }
+
+      resetForm();
+      setShowAdd(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save that spot.');
+    }
   };
 
   return (
@@ -96,10 +121,10 @@ export default function Spots() {
             onSelect={(l) => {
               setLake(l);
               // Swims are lake-scoped — a swim picked for the previous
-              // lake makes no sense once the lake changes. Same for group
-              // visibility: it's only legal on a group-owned lake.
+              // lake makes no sense once the lake changes. Same for
+              // "share with group": it's only legal on a group-owned lake.
               setSwim(null);
-              setVisibility('private');
+              setShareMode('private');
             }}
             variant="dock"
           />
@@ -131,14 +156,25 @@ export default function Spots() {
               keyboardType="number-pad"
               className="flex-1 rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
             />
-            <TextInput
-              value={depth}
-              onChangeText={setDepth}
-              placeholder="Depth (m)"
-              placeholderTextColor="#5C6154"
-              keyboardType="decimal-pad"
-              className="flex-1 rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
-            />
+            <View className="flex-1 flex-row items-center rounded-lg bg-dock-panel pr-1.5">
+              <TextInput
+                value={depth}
+                onChangeText={setDepth}
+                placeholder="Depth"
+                placeholderTextColor="#5C6154"
+                keyboardType="decimal-pad"
+                className="flex-1 px-4 py-3 font-sans text-base text-dock-text"
+              />
+              <Pressable
+                onPress={() => setDepthUnit((u) => (u === 'm' ? 'ft' : 'm'))}
+                hitSlop={6}
+                className="rounded-md bg-white/10 px-2.5 py-1.5"
+              >
+                <Text className="font-label text-xs uppercase tracking-wide text-dock-amber">
+                  {depthUnit}
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
           <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
@@ -161,7 +197,7 @@ export default function Spots() {
           <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
             Substrate
           </Text>
-          <BottomTypePicker value={bottomType} onChange={setBottomType} />
+          <BottomTypePicker value={bottomTypes} onChange={setBottomTypes} />
 
           <TextInput
             value={notes}
@@ -172,47 +208,93 @@ export default function Spots() {
             className="rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
           />
 
-          {lake?.group_id ? (
-            <View className="gap-2">
-              <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
-                Visibility
-              </Text>
-              <View className="flex-row gap-2">
+          <View className="gap-2">
+            <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+              Share
+            </Text>
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={() => setShareMode('private')}
+                className={`flex-1 items-center rounded-lg border py-2.5 ${
+                  shareMode === 'private' ? 'border-dock-amber bg-dock-amber/20' : 'border-dock-border'
+                }`}
+              >
+                <Text
+                  className={`font-label text-xs uppercase tracking-wide ${
+                    shareMode === 'private' ? 'text-dock-amber' : 'text-dock-text-dim'
+                  }`}
+                >
+                  Private
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setShareMode('friend')}
+                className={`flex-1 items-center rounded-lg border py-2.5 ${
+                  shareMode === 'friend' ? 'border-dock-amber bg-dock-amber/20' : 'border-dock-border'
+                }`}
+              >
+                <Text
+                  className={`font-label text-xs uppercase tracking-wide ${
+                    shareMode === 'friend' ? 'text-dock-amber' : 'text-dock-text-dim'
+                  }`}
+                >
+                  A friend
+                </Text>
+              </Pressable>
+              {lake?.group_id ? (
                 <Pressable
-                  onPress={() => setVisibility('private')}
+                  onPress={() => setShareMode('group')}
                   className={`flex-1 items-center rounded-lg border py-2.5 ${
-                    visibility === 'private' ? 'border-dock-amber bg-dock-amber/20' : 'border-dock-border'
+                    shareMode === 'group' ? 'border-dock-amber bg-dock-amber/20' : 'border-dock-border'
                   }`}
                 >
                   <Text
                     className={`font-label text-xs uppercase tracking-wide ${
-                      visibility === 'private' ? 'text-dock-amber' : 'text-dock-text-dim'
+                      shareMode === 'group' ? 'text-dock-amber' : 'text-dock-text-dim'
                     }`}
                   >
-                    Private
+                    The group
                   </Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => setVisibility('group')}
-                  className={`flex-1 items-center rounded-lg border py-2.5 ${
-                    visibility === 'group' ? 'border-dock-amber bg-dock-amber/20' : 'border-dock-border'
-                  }`}
-                >
-                  <Text
-                    className={`font-label text-xs uppercase tracking-wide ${
-                      visibility === 'group' ? 'text-dock-amber' : 'text-dock-text-dim'
-                    }`}
-                  >
-                    Share with group
-                  </Text>
-                </Pressable>
-              </View>
+              ) : null}
             </View>
-          ) : null}
+
+            {shareMode === 'friend' ? (
+              friends && friends.length > 0 ? (
+                <View className="flex-row flex-wrap gap-2">
+                  {friends.map((f) => (
+                    <Pressable
+                      key={f.id}
+                      onPress={() => setShareFriendId(f.friend?.id ?? null)}
+                      className={`rounded-full border px-3.5 py-1.5 ${
+                        shareFriendId === f.friend?.id
+                          ? 'border-dock-amber bg-dock-amber/20'
+                          : 'border-dock-border'
+                      }`}
+                    >
+                      <Text
+                        className={`font-sans text-xs ${
+                          shareFriendId === f.friend?.id ? 'text-dock-amber' : 'text-dock-text-dim'
+                        }`}
+                      >
+                        {f.friend?.display_name ?? 'Angler'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <Text className="font-sans text-xs text-dock-text-faint">
+                  No friends added yet — add one from Friends first.
+                </Text>
+              )
+            ) : null}
+          </View>
+
+          {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
 
           <AnimatedPressable
             onPress={handleAdd}
-            disabled={!lake || createSpot.isPending}
+            disabled={!lake || (shareMode === 'friend' && !shareFriendId) || createSpot.isPending}
             className="items-center rounded-lg bg-dock-moss py-3 disabled:opacity-40"
           >
             {createSpot.isPending ? (

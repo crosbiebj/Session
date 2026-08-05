@@ -9,13 +9,13 @@ import { CurrentConditions } from '@/components/CurrentConditions';
 import { DockRow, DockRowEmpty } from '@/components/DockRow';
 import { Pressable } from '@/components/Pressable';
 import { useCatchCount } from '@/hooks/useCatchCount';
-import { useFriends } from '@/hooks/useFriendships';
+import { useFriends, useIncomingFriendRequests, useRespondToFriendRequest } from '@/hooks/useFriendships';
 import { useGroups } from '@/hooks/useGroups';
 import { useLakes } from '@/hooks/useLakes';
 import { useSessions } from '@/hooks/useSessions';
 import { useSpots } from '@/hooks/useSpots';
-import { useTargets } from '@/hooks/useTargets';
-import { useTickets } from '@/hooks/useTickets';
+import { useSetTargetAchieved, useTargets } from '@/hooks/useTargets';
+import { useTickets, useUpdateTicketStatus } from '@/hooks/useTickets';
 
 export default function Home() {
   const catchCount = useCatchCount();
@@ -26,6 +26,10 @@ export default function Home() {
   const spots = useSpots();
   const tickets = useTickets();
   const friends = useFriends();
+  const incomingRequests = useIncomingFriendRequests();
+  const setTargetAchieved = useSetTargetAchieved();
+  const updateTicketStatus = useUpdateTicketStatus();
+  const respondToRequest = useRespondToFriendRequest();
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top']}>
@@ -100,12 +104,27 @@ export default function Home() {
               {targets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : targets.data && targets.data.length > 0 ? (
-                <View className="gap-1.5">
+                <View className="gap-2">
                   {targets.data.slice(0, 3).map((t) => (
-                    <Text key={t.id} className="font-sans text-sm text-dock-text-dim">
-                      {t.known_fish?.name ?? t.target_sub_type ?? 'Target'}
-                      {t.lakes?.name ? ` · ${t.lakes.name}` : ''}
-                    </Text>
+                    <View key={t.id} className="flex-row items-center justify-between gap-2">
+                      <Text className="flex-1 font-sans text-sm text-dock-text-dim">
+                        {t.known_fish?.name ?? t.target_sub_type ?? 'Target'}
+                        {t.lakes?.name ? ` · ${t.lakes.name}` : ''}
+                      </Text>
+                      <Pressable
+                        onPress={() => setTargetAchieved.mutate({ id: t.id, achieved: !t.achieved_at })}
+                        hitSlop={6}
+                        className={`rounded-full px-2.5 py-1 ${t.achieved_at ? 'bg-dock-amber/20' : 'bg-white/10'}`}
+                      >
+                        <Text
+                          className={`font-label text-[10px] uppercase tracking-wide ${
+                            t.achieved_at ? 'text-dock-amber' : 'text-dock-text-dim'
+                          }`}
+                        >
+                          {t.achieved_at ? 'Achieved' : 'Mark achieved'}
+                        </Text>
+                      </Pressable>
+                    </View>
                   ))}
                 </View>
               ) : (
@@ -119,13 +138,15 @@ export default function Home() {
               ) : sessions.data && sessions.data.length > 0 ? (
                 <View className="gap-1.5">
                   {sessions.data.slice(0, 3).map((s) => (
-                    <Text key={s.id} className="font-sans text-sm text-dock-text-dim">
-                      {s.lakes?.name ?? 'Lake TBC'} ·{' '}
-                      {new Date(s.planned_start).toLocaleDateString(undefined, {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
-                    </Text>
+                    <Pressable key={s.id} onPress={() => router.push(`/sessions/${s.id}`)} scaleTo={0.98}>
+                      <Text className="font-sans text-sm text-dock-text-dim">
+                        {s.lakes?.name ?? 'Lake TBC'} ·{' '}
+                        {new Date(s.planned_start).toLocaleDateString(undefined, {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </Text>
+                    </Pressable>
                   ))}
                 </View>
               ) : (
@@ -139,9 +160,9 @@ export default function Home() {
               ) : groups.data && groups.data.length > 0 ? (
                 <View className="gap-1.5">
                   {groups.data.slice(0, 3).map((g) => (
-                    <Text key={g.id} className="font-sans text-sm text-dock-text-dim">
-                      {g.name}
-                    </Text>
+                    <Pressable key={g.id} onPress={() => router.push(`/groups/${g.id}`)} scaleTo={0.98}>
+                      <Text className="font-sans text-sm text-dock-text-dim">{g.name}</Text>
+                    </Pressable>
                   ))}
                 </View>
               ) : (
@@ -155,9 +176,9 @@ export default function Home() {
               ) : lakes.data && lakes.data.length > 0 ? (
                 <View className="gap-1.5">
                   {lakes.data.slice(0, 3).map((l) => (
-                    <Text key={l.id} className="font-sans text-sm text-dock-text-dim">
-                      {l.name}
-                    </Text>
+                    <Pressable key={l.id} onPress={() => router.push(`/lakes/${l.id}`)} scaleTo={0.98}>
+                      <Text className="font-sans text-sm text-dock-text-dim">{l.name}</Text>
+                    </Pressable>
                   ))}
                 </View>
               ) : (
@@ -186,14 +207,33 @@ export default function Home() {
               {tickets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : tickets.data && tickets.data.length > 0 ? (
-                <View className="gap-1.5">
+                <View className="gap-2">
                   {tickets.data.slice(0, 3).map((t) => (
-                    <Text key={t.id} className="font-sans text-sm text-dock-text-dim">
-                      {t.syndicate_name ?? t.lakes?.name ?? 'Ticket'} ·{' '}
-                      <Text className={t.status === 'held' ? 'text-dock-moss' : 'text-dock-amber'}>
-                        {t.status}
+                    <View key={t.id} className="flex-row items-center justify-between gap-2">
+                      <Text className="flex-1 font-sans text-sm text-dock-text-dim">
+                        {t.syndicate_name ?? t.lakes?.name ?? 'Ticket'}
                       </Text>
-                    </Text>
+                      <Pressable
+                        onPress={() =>
+                          updateTicketStatus.mutate({
+                            id: t.id,
+                            status: t.status === 'held' ? 'wanted' : 'held',
+                          })
+                        }
+                        hitSlop={6}
+                        className={`rounded-full px-2.5 py-1 ${
+                          t.status === 'held' ? 'bg-dock-moss/20' : 'bg-dock-amber/20'
+                        }`}
+                      >
+                        <Text
+                          className={`font-label text-[10px] uppercase tracking-wide ${
+                            t.status === 'held' ? 'text-dock-moss' : 'text-dock-amber'
+                          }`}
+                        >
+                          {t.status}
+                        </Text>
+                      </Pressable>
+                    </View>
                   ))}
                 </View>
               ) : (
@@ -201,19 +241,53 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="person-add" label="Friends" count={friends.data?.length ?? 0} route="/friends">
+            <DockRow
+              icon="person-add"
+              label="Friends"
+              count={incomingRequests.data?.length || friends.data?.length || 0}
+              route="/friends"
+            >
               {friends.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
-              ) : friends.data && friends.data.length > 0 ? (
-                <View className="gap-1.5">
-                  {friends.data.slice(0, 3).map((f) => (
-                    <Text key={f.id} className="font-sans text-sm text-dock-text-dim">
-                      {f.friend?.display_name ?? 'Angler'}
-                    </Text>
-                  ))}
-                </View>
               ) : (
-                <DockRowEmpty label="No friends added yet." />
+                <View className="gap-2">
+                  {incomingRequests.data && incomingRequests.data.length > 0
+                    ? incomingRequests.data.map((req) => (
+                        <View key={req.id} className="flex-row items-center justify-between gap-2">
+                          <Text className="flex-1 font-sans text-sm text-dock-amber">
+                            {req.requester?.display_name ?? 'Angler'} wants to connect
+                          </Text>
+                          <View className="flex-row gap-1.5">
+                            <Pressable
+                              onPress={() => respondToRequest.mutate({ friendshipId: req.id, accept: false })}
+                              hitSlop={6}
+                              className="h-6 w-6 items-center justify-center rounded-full bg-white/10"
+                            >
+                              <Ionicons name="close" size={13} color="#8B9184" />
+                            </Pressable>
+                            <Pressable
+                              onPress={() => respondToRequest.mutate({ friendshipId: req.id, accept: true })}
+                              hitSlop={6}
+                              className="h-6 w-6 items-center justify-center rounded-full bg-dock-moss"
+                            >
+                              <Ionicons name="checkmark" size={13} color="#EDEBE0" />
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))
+                    : null}
+                  {friends.data && friends.data.length > 0 ? (
+                    friends.data
+                      .slice(0, 3)
+                      .map((f) => (
+                        <Text key={f.id} className="font-sans text-sm text-dock-text-dim">
+                          {f.friend?.display_name ?? 'Angler'}
+                        </Text>
+                      ))
+                  ) : !incomingRequests.data?.length ? (
+                    <DockRowEmpty label="No friends added yet." />
+                  ) : null}
+                </View>
               )}
             </DockRow>
           </Animated.View>
