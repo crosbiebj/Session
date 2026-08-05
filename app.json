@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Session",
+    "name": "(OB)Session",
     "slug": "session",
     "scheme": "session",
     "version": "1.0.0",
@@ -8,7 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.crosbiebj.session",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,11 +29,33 @@
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "(OB)Session needs access to your photos so you can add them to a catch.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "(OB)Session uses your location to show current conditions and to pin lakes where you fish."
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2bc448ed-f842-412c-8dc6-4dabb0b2b182"
+      }
+    },
+    "owner": "crosbie"
   }
 }

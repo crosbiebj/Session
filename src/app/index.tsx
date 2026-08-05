@@ -1,12 +1,8 @@
-import { Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
+
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function Index() {
-  return (
-    <View className="flex-1 items-center justify-center bg-cream">
-      <Text className="font-serif text-2xl text-moss">Session</Text>
-      <Text className="mt-2 font-sans text-base text-ink">
-        Scaffold ready.
-      </Text>
-    </View>
-  );
+  const session = useAuthStore((state) => state.session);
+  return <Redirect href={session ? '/(app)' : '/(auth)/sign-in'} />;
 }
