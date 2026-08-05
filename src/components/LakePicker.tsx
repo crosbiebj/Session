@@ -13,6 +13,7 @@ import {
 
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useCreateLake, useLakes } from '@/hooks/useLakes';
+import { describeError } from '@/lib/errors';
 import type { Lake } from '@/types/database';
 
 // Manual pick-from-saved-list or add-new. New lakes created here are
@@ -58,7 +59,7 @@ export function LakePicker({
       onSelect(lake);
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add that lake.');
+      setError(describeError(err));
     }
   };
 

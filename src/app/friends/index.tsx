@@ -13,6 +13,7 @@ import {
   useSendFriendRequestByCode,
 } from '@/hooks/useFriendships';
 import { useProfile } from '@/hooks/useProfile';
+import { describeError } from '@/lib/errors';
 
 // No username search (Section 3: nothing visible by default, no public
 // directory of anglers) — a friend request needs a code the other person
@@ -44,7 +45,7 @@ export default function Friends() {
       await sendByCode.mutateAsync(code.trim());
       setCode('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send that request.');
+      setError(describeError(err));
     }
   };
 

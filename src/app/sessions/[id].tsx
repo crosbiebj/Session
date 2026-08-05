@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useDeleteSession, useSession, useUpdateSession } from '@/hooks/useSessions';
+import { describeError } from '@/lib/errors';
 
 // "Once the session is logged you can't click into it, it just adds it
 // as a dead bar which you cannot interact with. U should be able to
@@ -50,7 +51,7 @@ export default function SessionDetail() {
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save those changes.');
+      setError(describeError(err));
     }
   };
 
@@ -59,7 +60,7 @@ export default function SessionDetail() {
       await deleteSession.mutateAsync(id);
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete this session.');
+      setError(describeError(err));
     }
   };
 

@@ -12,6 +12,7 @@ import { RodLengthPicker } from '@/components/RodLengthPicker';
 import { SwimPicker } from '@/components/SwimPicker';
 import { useFriends } from '@/hooks/useFriendships';
 import { useCreateSpot, useShareSpotWithFriend, useSpots } from '@/hooks/useSpots';
+import { describeError } from '@/lib/errors';
 import type { Lake, Swim } from '@/types/database';
 
 type ShareMode = 'private' | 'friend' | 'group';
@@ -89,7 +90,7 @@ export default function Spots() {
       resetForm();
       setShowAdd(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save that spot.');
+      setError(describeError(err));
     }
   };
 

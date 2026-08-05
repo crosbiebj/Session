@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCreateGroup, useGroups } from '@/hooks/useGroups';
+import { describeError } from '@/lib/errors';
 
 export default function Groups() {
   const { add } = useLocalSearchParams<{ add?: string }>();
@@ -41,7 +42,7 @@ export default function Groups() {
       await createGroup.mutateAsync(newName.trim());
       setNewName('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create that group.');
+      setError(describeError(err));
     }
   };
 

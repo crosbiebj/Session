@@ -20,6 +20,7 @@ import { LakePicker } from '@/components/LakePicker';
 import { pickCatchPhotos, type PickedPhoto } from '@/components/PhotoPicker';
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCreateCatch } from '@/hooks/useCreateCatch';
+import { describeError } from '@/lib/errors';
 import type { Lake } from '@/types/database';
 
 const LB_TO_GRAMS = 453.59237;
@@ -98,7 +99,7 @@ export default function LogCatch() {
       });
       router.back();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Something went wrong saving this catch.');
+      setSaveError(describeError(err));
     }
   };
 

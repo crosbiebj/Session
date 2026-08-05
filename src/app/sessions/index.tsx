@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LakePicker } from '@/components/LakePicker';
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCreateSession, useSessions } from '@/hooks/useSessions';
+import { describeError } from '@/lib/errors';
 import type { Lake } from '@/types/database';
 
 export default function Sessions() {
@@ -40,7 +41,7 @@ export default function Sessions() {
       setNotes('');
       setShowAdd(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not plan that session.');
+      setError(describeError(err));
     }
   };
 

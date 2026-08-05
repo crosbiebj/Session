@@ -18,6 +18,7 @@ import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useGroups } from '@/hooks/useGroups';
 import { useCreateLake, useLakes } from '@/hooks/useLakes';
+import { describeError } from '@/lib/errors';
 
 export default function Lakes() {
   const { add } = useLocalSearchParams<{ add?: string }>();
@@ -55,7 +56,7 @@ export default function Lakes() {
       setNewName('');
       setOwnerGroupId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add that lake.');
+      setError(describeError(err));
     }
   };
 
