@@ -427,10 +427,14 @@ to The Book.
 
 **Interaction model:**
 - Tapping the **chevron/row body** expands an inline accordion — a quick
-  peek at that section's list, collapses again on second tap
-- Tapping the **icon itself** navigates to that section's full dedicated
-  page (section name shown at the top, so there's never ambiguity about
-  where you are)
+  peek at that section's list, collapses again on second tap. Where an
+  item in the peek can be acted on directly (mark a target achieved, flip
+  a ticket's held/wanted status, accept or decline a friend request, open
+  a session/group/lake), it's a real control, not read-only text.
+- Tapping the **icon itself** slides out two quick-action buttons — Add
+  [X] and [X]'s saved list — rather than jumping straight to the full
+  page. Tapping the icon again collapses it. Stats is the one exception
+  (plain tap straight through, since there's nothing to "add" there).
 
 **Stats** (new, ties into Pattern Insights below): best session, trip-outs
 (count of sessions logged), total hours on the bank, personal bests — this
@@ -687,8 +691,10 @@ unmistakably "carp angler," not generic fishing/outdoor iconography.
 - **Bottom nav:** Home, Profile only — no duplication with the dock
 - **Home:** "Your Book" hero + icon dock (Stats, Targets, Sessions, Groups,
   Favourite Lakes, Syndicate Tickets, Friends)
-- **Dock interaction:** tap row/chevron = inline quick-peek accordion; tap
-  icon = full dedicated page for that section
+- **Dock interaction:** tap row/chevron = inline quick-peek accordion
+  (individually actionable, not just a preview); tap icon = slide-out
+  Add/View quick actions rather than a hard jump to the full page (Stats
+  excepted — nothing to add there)
 - **The Book:** opened from the Home hero card, full-screen, page-turning,
   warm design mode — this is where the chronological catch feed lives
 - **Quick-log:** floating action button on Home, opens straight to photo

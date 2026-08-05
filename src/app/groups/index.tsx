@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,10 +18,21 @@ import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCreateGroup, useGroups } from '@/hooks/useGroups';
 
 export default function Groups() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: groups, isLoading } = useGroups();
   const createGroup = useCreateGroup();
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const nameInputRef = useRef<TextInput>(null);
+
+  // "Create Group" from the Home dock's slide-out action lands here and
+  // should drop straight into the input, not just show the same list.
+  useEffect(() => {
+    if (add === '1') {
+      const timer = setTimeout(() => nameInputRef.current?.focus(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [add]);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -95,6 +106,7 @@ export default function Groups() {
         {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
         <View className="flex-row gap-2">
           <TextInput
+            ref={nameInputRef}
             value={newName}
             onChangeText={setNewName}
             placeholder="New group name"

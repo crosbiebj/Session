@@ -100,7 +100,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="locate" label="Targets" count={targets.data?.length ?? 0} route="/targets">
+            <DockRow
+              icon="locate"
+              label="Targets"
+              count={targets.data?.length ?? 0}
+              route="/targets"
+              addRoute="/targets?add=1"
+              addLabel="Add Target"
+              viewLabel="Targets"
+            >
               {targets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : targets.data && targets.data.length > 0 ? (
@@ -132,7 +140,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="calendar" label="Sessions" count={sessions.data?.length ?? 0} route="/sessions">
+            <DockRow
+              icon="calendar"
+              label="Sessions"
+              count={sessions.data?.length ?? 0}
+              route="/sessions"
+              addRoute="/sessions?add=1"
+              addLabel="Plan Session"
+              viewLabel="Sessions"
+            >
               {sessions.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : sessions.data && sessions.data.length > 0 ? (
@@ -154,7 +170,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="people" label="Groups" count={groups.data?.length ?? 0} route="/groups">
+            <DockRow
+              icon="people"
+              label="Groups"
+              count={groups.data?.length ?? 0}
+              route="/groups"
+              addRoute="/groups?add=1"
+              addLabel="Create Group"
+              viewLabel="Groups"
+            >
               {groups.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : groups.data && groups.data.length > 0 ? (
@@ -170,7 +194,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="water" label="Favourite Lakes" count={lakes.data?.length ?? 0} route="/lakes">
+            <DockRow
+              icon="water"
+              label="Favourite Lakes"
+              count={lakes.data?.length ?? 0}
+              route="/lakes"
+              addRoute="/lakes?add=1"
+              addLabel="Add Lake"
+              viewLabel="Saved Lakes"
+            >
               {lakes.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : lakes.data && lakes.data.length > 0 ? (
@@ -186,7 +218,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="navigate" label="Spots" count={spots.data?.length ?? 0} route="/spots">
+            <DockRow
+              icon="navigate"
+              label="Spots"
+              count={spots.data?.length ?? 0}
+              route="/spots"
+              addRoute="/spots?add=1"
+              addLabel="Add Spot"
+              viewLabel="Saved Spots"
+            >
               {spots.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : spots.data && spots.data.length > 0 ? (
@@ -203,7 +243,15 @@ export default function Home() {
               )}
             </DockRow>
 
-            <DockRow icon="ticket" label="Syndicate Tickets" count={tickets.data?.length ?? 0} route="/tickets">
+            <DockRow
+              icon="ticket"
+              label="Syndicate Tickets"
+              count={tickets.data?.length ?? 0}
+              route="/tickets"
+              addRoute="/tickets?add=1"
+              addLabel="Add Ticket"
+              viewLabel="Tickets"
+            >
               {tickets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : tickets.data && tickets.data.length > 0 ? (
@@ -246,6 +294,9 @@ export default function Home() {
               label="Friends"
               count={incomingRequests.data?.length || friends.data?.length || 0}
               route="/friends"
+              addRoute="/friends?add=1"
+              addLabel="Add Friend"
+              viewLabel="Friends"
             >
               {friends.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />

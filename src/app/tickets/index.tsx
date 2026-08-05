@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -9,9 +9,10 @@ import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useCreateTicket, useTickets } from '@/hooks/useTickets';
 
 export default function Tickets() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: tickets, isLoading } = useTickets();
   const createTicket = useCreateTicket();
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(add === '1');
   const [syndicateName, setSyndicateName] = useState('');
   const [status, setStatus] = useState<'held' | 'wanted'>('wanted');
 

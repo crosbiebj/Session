@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { useProfile } from '@/hooks/useProfile';
 // one narrow RLS crack that makes this possible without exposing a
 // searchable user list.
 export default function Friends() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: profile } = useProfile();
   const { data: friends, isLoading } = useFriends();
   const { data: incoming } = useIncomingFriendRequests();
@@ -27,6 +28,14 @@ export default function Friends() {
   const sendByCode = useSendFriendRequestByCode();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const codeInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (add === '1') {
+      const timer = setTimeout(() => codeInputRef.current?.focus(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [add]);
 
   const handleSend = async () => {
     if (!code.trim()) return;
@@ -78,6 +87,7 @@ export default function Friends() {
 
         <View className="flex-row gap-2">
           <TextInput
+            ref={codeInputRef}
             value={code}
             onChangeText={(v) => setCode(v.toUpperCase())}
             placeholder="Enter a friend's code"

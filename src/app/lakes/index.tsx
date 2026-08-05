@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,6 +20,7 @@ import { useGroups } from '@/hooks/useGroups';
 import { useCreateLake, useLakes } from '@/hooks/useLakes';
 
 export default function Lakes() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: lakes, isLoading } = useLakes();
   const { data: groups } = useGroups();
   const createLake = useCreateLake();
@@ -32,6 +33,14 @@ export default function Lakes() {
   const [pinLocation, setPinLocation] = useState(false);
   const [ownerGroupId, setOwnerGroupId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const nameInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (add === '1') {
+      const timer = setTimeout(() => nameInputRef.current?.focus(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [add]);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -173,6 +182,7 @@ export default function Lakes() {
 
         <View className="flex-row gap-2">
           <TextInput
+            ref={nameInputRef}
             value={newName}
             onChangeText={setNewName}
             placeholder="Add a lake"

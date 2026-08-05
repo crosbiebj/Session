@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -17,11 +17,12 @@ import type { Lake, Swim } from '@/types/database';
 type ShareMode = 'private' | 'friend' | 'group';
 
 export default function Spots() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: spots, isLoading } = useSpots();
   const { data: friends } = useFriends();
   const createSpot = useCreateSpot();
   const shareSpot = useShareSpotWithFriend();
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(add === '1');
 
   const [lake, setLake] = useState<Lake | null>(null);
   const [name, setName] = useState('');

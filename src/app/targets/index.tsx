@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -24,11 +24,12 @@ const SUB_TYPES: FishSubType[] = [
 // treatment contained strictly to this page. Olive/stencil accents, "no
 // forum energy" still applies — this is a wink, not a gimmick.
 export default function Targets() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: targets, isLoading } = useTargets();
   const createTarget = useCreateTarget();
   const [notes, setNotes] = useState('');
   const [subType, setSubType] = useState<FishSubType | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(add === '1');
 
   const handleAdd = async () => {
     if (!notes.trim() && !subType) return;

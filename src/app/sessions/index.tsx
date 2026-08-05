@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -12,9 +12,10 @@ import { useCreateSession, useSessions } from '@/hooks/useSessions';
 import type { Lake } from '@/types/database';
 
 export default function Sessions() {
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: sessions, isLoading } = useSessions();
   const createSession = useCreateSession();
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(add === '1');
   const [lake, setLake] = useState<Lake | null>(null);
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
