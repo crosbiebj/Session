@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
@@ -55,13 +55,26 @@ export default function SessionDetail() {
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await deleteSession.mutateAsync(id);
-      router.back();
-    } catch (err) {
-      setError(describeError(err));
-    }
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete this session?',
+      'You can restore it later from Recently Deleted in Profile.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSession.mutateAsync(id);
+              router.back();
+            } catch (err) {
+              setError(describeError(err));
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -91,7 +104,11 @@ export default function SessionDetail() {
           <ActivityIndicator color="#5C7A4C" />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+        <ScrollView
+            contentContainerStyle={{ padding: 20, gap: 12 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
           <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
             Starts
           </Text>

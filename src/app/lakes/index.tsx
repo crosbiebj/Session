@@ -87,6 +87,8 @@ export default function Lakes() {
         </View>
       ) : (
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={lakes ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20, gap: 8 }}

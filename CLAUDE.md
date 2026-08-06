@@ -656,7 +656,10 @@ First-run experience should sell the vision, not just collect a signup:
 **Two distinct modes, deliberately separated:**
 
 **Mode 1 — The Book (warm, journal-like):** cream base, serif headings,
-tactile. This is the one place the original warm/earthy mood lives.
+tactile. This is the *only* screen that gets this treatment — not sign-in,
+not onboarding, nothing else. If it isn't the Book, it's Mode 2, full
+stop; the warm palette existed only as a scaffold smoke-test default
+early on and doesn't get to default to elsewhere.
 - Base/background: warm cream (`#F5F1E8`)
 - Primary: deep moss green (`#3D4A34`)
 - Accent: rich tobacco brown (`#8B5A2B`)

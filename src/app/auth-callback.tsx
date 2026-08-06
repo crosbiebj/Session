@@ -39,22 +39,22 @@ export default function AuthCallback() {
   }, [code, linkError]);
 
   return (
-    <SafeAreaView className="flex-1 bg-cream" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
       <View className="flex-1 items-center justify-center px-8">
         {error ? (
           <>
-            <Text className="mb-3 text-center font-serif text-2xl text-moss">
+            <Text className="mb-3 text-center font-label-semibold text-xl uppercase tracking-wide text-dock-text">
               Couldn&apos;t confirm your email
             </Text>
-            <Text className="text-center font-sans text-base text-ink/70">{error}</Text>
+            <Text className="text-center font-sans text-base text-dock-text-dim">{error}</Text>
             <Pressable onPress={() => router.replace('/(auth)/sign-in')} className="mt-8">
-              <Text className="font-sans text-sm text-ink/70">Back to sign in</Text>
+              <Text className="font-sans text-sm text-dock-text-dim">Back to sign in</Text>
             </Pressable>
           </>
         ) : (
           <>
-            <ActivityIndicator color="#3D4A34" />
-            <Text className="mt-4 font-sans text-base text-ink/70">Confirming your email…</Text>
+            <ActivityIndicator color="#5C7A4C" />
+            <Text className="mt-4 font-sans text-base text-dock-text-dim">Confirming your email…</Text>
           </>
         )}
       </View>

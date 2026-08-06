@@ -9,9 +9,32 @@ export function useSessions() {
       const { data, error } = await supabase
         .from('sessions')
         .select('*, lakes(name)')
+        .is('deleted_at', null)
         .order('planned_start', { ascending: true });
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+// Own sessions plus anything a group I'm in has been let see (Phase 2's
+// group calendar, pulled forward — sessions_select_group_visible RLS
+// does the actual scoping). owner(display_name) lets the Home widget
+// label/colour-code whose session each one is.
+export function useUpcomingSessions(limit = 5) {
+  return useQuery({
+    queryKey: ['sessions', 'upcoming', limit],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, lakes(name), owner:owner_id(id, display_name)')
+        .is('deleted_at', null)
+        .gte('planned_end', new Date().toISOString())
+        .order('planned_start', { ascending: true })
+        .limit(limit);
+      if (error) throw error;
+      return { sessions: data, myId: userData.user?.id ?? null };
     },
   });
 }
@@ -63,11 +86,45 @@ export function useDeleteSession() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('sessions').delete().eq('id', id);
+      const { error } = await supabase
+        .from('sessions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['trash'] });
+    },
+  });
+}
+
+export function useTrashedSessions() {
+  return useQuery({
+    queryKey: ['trash', 'sessions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, lakes(name)')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useRestoreSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('sessions').update({ deleted_at: null }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['trash'] });
     },
   });
 }
@@ -76,7 +133,13 @@ export function useCreateSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { lakeId: string; plannedStart: Date; plannedEnd: Date; notes: string | null }) => {
+    mutationFn: async (input: {
+      lakeId: string;
+      plannedStart: Date;
+      plannedEnd: Date;
+      notes: string | null;
+      visibleToGroupId?: string | null;
+    }) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw new Error('Not signed in');
 
@@ -88,6 +151,7 @@ export function useCreateSession() {
           planned_start: input.plannedStart.toISOString(),
           planned_end: input.plannedEnd.toISOString(),
           notes: input.notes,
+          visible_to_group_id: input.visibleToGroupId ?? null,
         })
         .select()
         .single();

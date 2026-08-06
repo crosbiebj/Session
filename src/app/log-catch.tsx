@@ -29,6 +29,9 @@ const OZ_TO_GRAMS = 28.3495231;
 // Quick-log only (photo, date & time, weight, lake) — the six detail
 // tiles (Location beyond lake, Fish details, Tackle, Conditions, Session,
 // Story) are deferred. See the Milestone 1 plan.
+//
+// Mode 2 (dark) — CLAUDE.md §6a: the Book is the only screen that stays
+// warm/cream; this is a modal off the Home FAB, not the Book itself.
 export default function LogCatch() {
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [pickingPhotos, setPickingPhotos] = useState(true);
@@ -104,7 +107,7 @@ export default function LogCatch() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cream" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
@@ -113,20 +116,26 @@ export default function LogCatch() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={8}
-            className="h-9 w-9 items-center justify-center rounded-full bg-ink/10 active:opacity-70"
+            className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-70"
           >
-            <Ionicons name="close" size={20} color="#2B2620" />
+            <Ionicons name="close" size={20} color="#EDEBE0" />
           </Pressable>
-          <Text className="font-serif text-lg text-moss">Log a Catch</Text>
+          <Text className="font-label-semibold text-base uppercase tracking-wide text-dock-text">
+            Log a Catch
+          </Text>
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {/* Photos — a proper grid, not a cramped strip. "Photos are the
               hero" (CLAUDE.md §8), so this gets real visual weight. */}
           {pickingPhotos && photos.length === 0 ? (
-            <View className="h-48 items-center justify-center rounded-xl bg-white/40">
-              <ActivityIndicator color="#3D4A34" />
+            <View className="h-48 items-center justify-center rounded-xl bg-dock-panel">
+              <ActivityIndicator color="#5C7A4C" />
             </View>
           ) : (
             <View className="flex-row flex-wrap gap-2.5">
@@ -137,9 +146,9 @@ export default function LogCatch() {
                   layout={Layout.duration(200)}
                   className="relative h-[31%] w-[31%] aspect-square"
                   style={{
-                    shadowColor: '#2B2620',
+                    shadowColor: '#000',
                     shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.15,
+                    shadowOpacity: 0.3,
                     shadowRadius: 6,
                     elevation: 3,
                   }}
@@ -150,8 +159,8 @@ export default function LogCatch() {
                     resizeMode="cover"
                   />
                   {index === 0 ? (
-                    <View className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5">
-                      <Text className="font-label text-[10px] uppercase tracking-wide text-cream">
+                    <View className="absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5">
+                      <Text className="font-label text-[10px] uppercase tracking-wide text-dock-text">
                         Cover
                       </Text>
                     </View>
@@ -160,9 +169,9 @@ export default function LogCatch() {
                     onPress={() => handleRemovePhoto(photo.uri)}
                     scaleTo={0.8}
                     hitSlop={8}
-                    className="absolute -right-1.5 -top-1.5 h-6 w-6 items-center justify-center rounded-full bg-ink/80"
+                    className="absolute -right-1.5 -top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/80"
                   >
-                    <Ionicons name="close" size={14} color="#F5F1E8" />
+                    <Ionicons name="close" size={14} color="#EDEBE0" />
                   </AnimatedPressable>
                 </Animated.View>
               ))}
@@ -170,14 +179,14 @@ export default function LogCatch() {
                 <AnimatedPressable
                   onPress={handleAddPhotos}
                   disabled={pickingPhotos}
-                  className="h-full w-full items-center justify-center rounded-xl border border-dashed border-tobacco/40 bg-white/30"
+                  className="h-full w-full items-center justify-center rounded-xl border border-dashed border-dock-border bg-dock-panel"
                 >
                   {pickingPhotos ? (
-                    <ActivityIndicator color="#3D4A34" />
+                    <ActivityIndicator color="#5C7A4C" />
                   ) : (
                     <>
-                      <Ionicons name="add" size={22} color="#8B5A2B" />
-                      <Text className="mt-0.5 font-sans text-xs text-tobacco">
+                      <Ionicons name="add" size={22} color="#C9974A" />
+                      <Text className="mt-0.5 font-sans text-xs text-dock-text-dim">
                         {photos.length === 0 ? 'Add photos' : 'Add more'}
                       </Text>
                     </>
@@ -188,14 +197,14 @@ export default function LogCatch() {
           )}
 
           {/* Date & time */}
-          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-ink/50">
+          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-dock-text-faint">
             Date &amp; time
           </Text>
           <Pressable
             onPress={() => setShowDatePicker((v) => !v)}
-            className="rounded-lg border border-tobacco/30 bg-white/60 px-4 py-3"
+            className="rounded-lg bg-dock-panel px-4 py-3"
           >
-            <Text className="font-sans text-base text-ink">
+            <Text className="font-sans text-base text-dock-text">
               {occurredAt.toLocaleString(undefined, {
                 day: 'numeric',
                 month: 'short',
@@ -212,64 +221,67 @@ export default function LogCatch() {
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               maximumDate={new Date()}
               onChange={handleDateChange}
+              themeVariant="dark"
             />
           ) : null}
 
           {/* Weight */}
-          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-ink/50">
+          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-dock-text-faint">
             Weight
           </Text>
           <View className="flex-row gap-3">
-            <View className="flex-1 flex-row items-center rounded-lg border border-tobacco/30 bg-white/60 px-4">
+            <View className="flex-1 flex-row items-center rounded-lg bg-dock-panel px-4">
               <TextInput
                 value={lb}
                 onChangeText={setLb}
                 placeholder="0"
-                placeholderTextColor="#8B5A2B80"
+                placeholderTextColor="#5C6154"
                 keyboardType="number-pad"
-                className="flex-1 py-3 font-sans text-base text-ink"
+                returnKeyType="done"
+                className="flex-1 py-3 font-sans text-base text-dock-text"
               />
-              <Text className="font-sans text-sm text-ink/50">lb</Text>
+              <Text className="font-sans text-sm text-dock-text-faint">lb</Text>
             </View>
-            <View className="flex-1 flex-row items-center rounded-lg border border-tobacco/30 bg-white/60 px-4">
+            <View className="flex-1 flex-row items-center rounded-lg bg-dock-panel px-4">
               <TextInput
                 value={oz}
                 onChangeText={setOz}
                 placeholder="0"
-                placeholderTextColor="#8B5A2B80"
+                placeholderTextColor="#5C6154"
                 keyboardType="number-pad"
-                className="flex-1 py-3 font-sans text-base text-ink"
+                returnKeyType="done"
+                className="flex-1 py-3 font-sans text-base text-dock-text"
               />
-              <Text className="font-sans text-sm text-ink/50">oz</Text>
+              <Text className="font-sans text-sm text-dock-text-faint">oz</Text>
             </View>
           </View>
 
           {/* Lake */}
-          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-ink/50">
+          <Text className="mb-2 mt-6 font-label text-xs uppercase tracking-widest text-dock-text-faint">
             Lake
           </Text>
-          <LakePicker selectedLake={selectedLake} onSelect={setSelectedLake} />
+          <LakePicker selectedLake={selectedLake} onSelect={setSelectedLake} variant="dock" />
 
           {saveError ? (
-            <Text className="mt-4 font-sans text-sm text-red-700">{saveError}</Text>
+            <Text className="mt-4 font-sans text-sm text-red-400">{saveError}</Text>
           ) : null}
 
           <AnimatedPressable
             onPress={handleSave}
             disabled={createCatch.isPending}
-            className="mt-8 items-center rounded-lg bg-moss py-3.5 disabled:opacity-60"
+            className="mt-8 items-center rounded-lg bg-dock-moss py-3.5 disabled:opacity-60"
             style={{
-              shadowColor: '#3D4A34',
+              shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
+              shadowOpacity: 0.3,
               shadowRadius: 8,
               elevation: 4,
             }}
           >
             {createCatch.isPending ? (
-              <ActivityIndicator color="#F5F1E8" />
+              <ActivityIndicator color="#EDEBE0" />
             ) : (
-              <Text className="font-sans-semibold text-base text-cream">Save Catch</Text>
+              <Text className="font-sans-semibold text-base text-dock-text">Save Catch</Text>
             )}
           </AnimatedPressable>
         </ScrollView>

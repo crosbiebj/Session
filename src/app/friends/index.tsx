@@ -148,6 +148,8 @@ export default function Friends() {
         </View>
       ) : (
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={friends ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20, gap: 8 }}

@@ -20,12 +20,14 @@ type DockRowProps = {
   count: number;
   route: string;
   // When both are given, the expanded accordion gets a small tray of
-  // quick-action pills (Add X / View X) above the preview content — part
+  // circular icon buttons (add / view) above the preview content — part
   // of the dropdown, not a replacement for it. The icon always still
   // hard-navigates straight to route, unchanged.
   addRoute?: string;
   addLabel?: string;
+  addIcon?: keyof typeof Ionicons.glyphMap;
   viewLabel?: string;
+  viewIcon?: keyof typeof Ionicons.glyphMap;
   children?: React.ReactNode;
 };
 
@@ -45,7 +47,9 @@ export function DockRow({
   route,
   addRoute,
   addLabel,
+  addIcon = 'add',
   viewLabel,
+  viewIcon = 'list',
   children,
 }: DockRowProps) {
   const [expanded, setExpanded] = useState(false);
@@ -71,16 +75,22 @@ export function DockRow({
           hitSlop={8}
           className="h-11 w-11 items-center justify-center"
         >
-          <Ionicons name={icon} size={21} color="#5C7A4C" />
+          <View className="h-9 w-9 items-center justify-center rounded-full bg-white/[0.07]">
+            <Ionicons name={icon} size={19} color="#5C7A4C" />
+          </View>
         </Pressable>
 
-        <Pressable onPress={toggle} scaleTo={0.98} className="flex-1 flex-row items-center py-3.5 pr-2">
+        <Pressable
+          onPress={toggle}
+          scaleTo={0.98}
+          className="flex-1 flex-row items-center gap-3 py-3.5 pl-1 pr-4"
+        >
           <Text className="flex-1 font-sans-medium text-base text-dock-text">{label}</Text>
           {count > 0 ? (
-            <Text className="mr-2 font-label text-xs text-dock-amber">{count}</Text>
+            <Text className="font-label text-xs text-dock-amber">{count}</Text>
           ) : null}
           <Animated.View style={chevronStyle}>
-            <Ionicons name="chevron-down" size={16} color="#5C6154" />
+            <Ionicons name="chevron-down" size={18} color="#5C6154" />
           </Animated.View>
         </Pressable>
       </View>
@@ -93,23 +103,45 @@ export function DockRow({
           className="pb-4 pl-11 pr-2"
         >
           {hasActions ? (
-            <View className="mb-3 flex-row gap-2">
-              <Animated.View entering={SlideInRight.duration(180)}>
+            <View className="mb-4 mt-1 flex-row gap-5 border-t border-dock-border pt-4">
+              <Animated.View entering={SlideInRight.duration(420)}>
                 <Pressable
                   onPress={() => router.push(addRoute as never)}
-                  className="rounded-full bg-dock-amber/20 px-3.5 py-1.5"
+                  scaleTo={0.9}
+                  className="items-center gap-1.5"
+                  style={{ width: 60 }}
                 >
-                  <Text className="font-label text-xs uppercase tracking-wide text-dock-amber">
+                  <View
+                    className="h-12 w-12 items-center justify-center rounded-full bg-dock-amber/15"
+                    style={{ borderWidth: 1, borderColor: '#C9974A40' }}
+                  >
+                    <Ionicons name={addIcon} size={21} color="#C9974A" />
+                  </View>
+                  <Text
+                    className="font-label text-[9px] uppercase tracking-wide text-dock-amber"
+                    numberOfLines={1}
+                  >
                     {addLabel}
                   </Text>
                 </Pressable>
               </Animated.View>
-              <Animated.View entering={SlideInRight.duration(180).delay(40)}>
+              <Animated.View entering={SlideInRight.duration(420).delay(100)}>
                 <Pressable
                   onPress={() => router.push(route as never)}
-                  className="rounded-full bg-white/10 px-3.5 py-1.5"
+                  scaleTo={0.9}
+                  className="items-center gap-1.5"
+                  style={{ width: 60 }}
                 >
-                  <Text className="font-label text-xs uppercase tracking-wide text-dock-text-dim">
+                  <View
+                    className="h-12 w-12 items-center justify-center rounded-full bg-white/[0.06]"
+                    style={{ borderWidth: 1, borderColor: '#FFFFFF1A' }}
+                  >
+                    <Ionicons name={viewIcon} size={19} color="#8B9184" />
+                  </View>
+                  <Text
+                    className="font-label text-[9px] uppercase tracking-wide text-dock-text-dim"
+                    numberOfLines={1}
+                  >
                     {viewLabel ?? label}
                   </Text>
                 </Pressable>

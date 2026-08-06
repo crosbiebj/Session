@@ -69,15 +69,26 @@ export function useCreateGroup() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw new Error('Not signed in');
 
-      // The handle_new_group trigger auto-adds the creator as owner —
+      // created_by is stamped server-side by the stamp_groups_created_by
+      // trigger (supabase/migrations/20260806100000_stamp_group_created_by.sql)
+      // — not sent from the client, so it can never disagree with what
+      // groups_insert_self's RLS check compares it against. The
+      // handle_new_group trigger then auto-adds the creator as owner —
       // see supabase/migrations/20260803150000_phase1_rls_policies.sql.
-      const { data, error } = await supabase
-        .from('groups')
-        .insert({ name, created_by: userData.user.id })
-        .select()
-        .single();
+      const { data, error } = await supabase.from('groups').insert({ name }).select().single();
 
-      if (error) throw error;
+      if (error) {
+        // Temporary diagnostic (Section: measure twice, cut once) — the
+        // trigger should make created_by = auth.uid() unconditionally
+        // true, so a repeat RLS failure here means auth.uid() itself is
+        // resolving to nothing server-side despite getUser() succeeding
+        // client-side. Surfacing the client's own view of the session
+        // tells us whether that's a client auth bug or something deeper.
+        const { data: sessionData } = await supabase.auth.getSession();
+        throw new Error(
+          `${error.message} (${error.code}) — client sees user ${userData.user.id}, session present: ${!!sessionData.session}, token expires: ${sessionData.session?.expires_at ?? 'n/a'}`,
+        );
+      }
       return data;
     },
     onSuccess: () => {

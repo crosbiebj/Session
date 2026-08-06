@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { getCatchPhotoSignedUrls } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
@@ -78,5 +78,38 @@ export function useCatches(filters: CatchFilters = {}) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.length === PAGE_SIZE ? lastPage[lastPage.length - 1].occurred_at : undefined,
+  });
+}
+
+// Cover photos from the angler's own catches, for the target reference-
+// photo picker — deliberately scoped to catches you own, not "anything
+// you have access to" (see the migration for why: no cross-angler photo
+// use without a clearer consent story via a real ToS).
+export function useMyCatchPhotos(limit = 30) {
+  return useQuery({
+    queryKey: ['catches', 'my-photos', limit],
+    queryFn: async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error('Not signed in');
+
+      const { data, error } = await supabase
+        .from('catch_photos')
+        .select('id, catch_id, storage_path_display, catches!inner(owner_id)')
+        .eq('catches.owner_id', userData.user.id)
+        .eq('position', 0)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      const paths = (data ?? []).map((p) => p.storage_path_display);
+      const signedUrls = await getCatchPhotoSignedUrls(paths);
+
+      return (data ?? []).map((p) => ({
+        id: p.id as string,
+        catchId: p.catch_id as string,
+        signedUrl: signedUrls[p.storage_path_display] ?? null,
+      }));
+    },
   });
 }

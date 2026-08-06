@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,8 +28,16 @@ export default function Profile() {
         </Animated.View>
 
         <Pressable
-          onPress={() => supabase.auth.signOut()}
+          onPress={() => router.push('/trash')}
           className="mt-10 flex-row items-center justify-center gap-2 rounded-xl border border-dock-border bg-dock-panel py-3.5"
+        >
+          <Ionicons name="trash-outline" size={18} color="#8B9184" />
+          <Text className="font-sans-semibold text-base text-dock-text">Recently Deleted</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => supabase.auth.signOut()}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-dock-border bg-dock-panel py-3.5"
         >
           <Ionicons name="log-out-outline" size={18} color="#EDEBE0" />
           <Text className="font-sans-semibold text-base text-dock-text">Sign Out</Text>

@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -8,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CurrentConditions } from '@/components/CurrentConditions';
 import { DockRow, DockRowEmpty } from '@/components/DockRow';
 import { Pressable } from '@/components/Pressable';
+import { StatsWidget } from '@/components/StatsWidget';
+import { UpcomingSessionsWidget } from '@/components/UpcomingSessionsWidget';
 import { useCatchCount } from '@/hooks/useCatchCount';
 import { useFriends, useIncomingFriendRequests, useRespondToFriendRequest } from '@/hooks/useFriendships';
 import { useGroups } from '@/hooks/useGroups';
@@ -18,6 +21,11 @@ import { useSetTargetAchieved, useTargets } from '@/hooks/useTargets';
 import { useTickets, useUpdateTicketStatus } from '@/hooks/useTickets';
 
 export default function Home() {
+  // The tab bar is absolutely positioned (frosted-glass, floats over
+  // content — see (app)/_layout.tsx) so it doesn't reserve flex space of
+  // its own. Without accounting for its real height here, the FAB sits
+  // right underneath it — technically present, invisible and untappable.
+  const tabBarHeight = useBottomTabBarHeight();
   const catchCount = useCatchCount();
   const targets = useTargets();
   const sessions = useSessions();
@@ -33,7 +41,7 @@ export default function Home() {
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }}>
         <View className="px-5 pt-6">
           {/* "Your Book" hero — the one warm/tactile exception in Mode 2
               (CLAUDE.md §3, Home screen). A soft gradient instead of a
@@ -57,12 +65,36 @@ export default function Home() {
                 end={{ x: 1, y: 1 }}
                 style={{ borderRadius: 20, padding: 24, overflow: 'hidden' }}
               >
-                <Text className="font-serif text-2xl text-moss">Your Book</Text>
-                <Text className="mt-1 font-sans text-sm text-ink/70">
-                  {catchCount.data
-                    ? `${catchCount.data} capture${catchCount.data === 1 ? '' : 's'} kept.`
-                    : 'Every capture, kept.'}
-                </Text>
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className="font-serif text-2xl text-moss">Your Book</Text>
+                    <Text className="mt-1 font-sans text-sm text-ink/70">
+                      {catchCount.data
+                        ? `${catchCount.data} capture${catchCount.data === 1 ? '' : 's'} kept.`
+                        : 'Every capture, kept.'}
+                    </Text>
+                  </View>
+                  {/* A nested Pressable takes the tap over the card's own
+                      "open the Book" press — no stopPropagation needed,
+                      that's how RN resolves overlapping touch targets. */}
+                  <Pressable
+                    onPress={() => router.push('/log-catch')}
+                    scaleTo={0.85}
+                    hitSlop={8}
+                    accessibilityLabel="Log a catch"
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 6,
+                      elevation: 3,
+                    }}
+                  >
+                    <View className="h-11 w-11 items-center justify-center rounded-full bg-moss">
+                      <Ionicons name="add" size={22} color="#F5F1E8" />
+                    </View>
+                  </Pressable>
+                </View>
               </LinearGradient>
             </Pressable>
           </Animated.View>
@@ -108,6 +140,7 @@ export default function Home() {
               addRoute="/targets?add=1"
               addLabel="Add Target"
               viewLabel="Targets"
+              viewIcon="locate-outline"
             >
               {targets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -148,6 +181,7 @@ export default function Home() {
               addRoute="/sessions?add=1"
               addLabel="Plan Session"
               viewLabel="Sessions"
+              viewIcon="calendar-outline"
             >
               {sessions.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -178,6 +212,7 @@ export default function Home() {
               addRoute="/groups?add=1"
               addLabel="Create Group"
               viewLabel="Groups"
+              viewIcon="people-outline"
             >
               {groups.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -202,6 +237,7 @@ export default function Home() {
               addRoute="/lakes?add=1"
               addLabel="Add Lake"
               viewLabel="Saved Lakes"
+              viewIcon="water-outline"
             >
               {lakes.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -226,6 +262,7 @@ export default function Home() {
               addRoute="/spots?add=1"
               addLabel="Add Spot"
               viewLabel="Saved Spots"
+              viewIcon="navigate-outline"
             >
               {spots.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -251,6 +288,7 @@ export default function Home() {
               addRoute="/tickets?add=1"
               addLabel="Add Ticket"
               viewLabel="Tickets"
+              viewIcon="ticket-outline"
             >
               {tickets.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -297,6 +335,7 @@ export default function Home() {
               addRoute="/friends?add=1"
               addLabel="Add Friend"
               viewLabel="Friends"
+              viewIcon="people-outline"
             >
               {friends.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
@@ -342,41 +381,19 @@ export default function Home() {
               )}
             </DockRow>
           </Animated.View>
+
+          {/* Two widgets filling the space below the dock — upcoming
+              trips (yours and anything a group's shared with you) and a
+              quick stats front door, rather than leaving it empty. */}
+          <Animated.View
+            entering={FadeInDown.duration(400).delay(150)}
+            className="mt-4 flex-row gap-3"
+          >
+            <UpcomingSessionsWidget />
+            <StatsWidget />
+          </Animated.View>
         </View>
       </ScrollView>
-
-      <Animated.View
-        entering={FadeIn.duration(400).delay(200)}
-        className="absolute bottom-8 right-6"
-      >
-        <Pressable
-          onPress={() => router.push('/log-catch')}
-          scaleTo={0.88}
-          accessibilityLabel="Log a catch"
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 5 },
-            shadowOpacity: 0.4,
-            shadowRadius: 10,
-            elevation: 8,
-          }}
-        >
-          <LinearGradient
-            colors={['#D8AE6C', '#C9974A']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              height: 64,
-              width: 64,
-              borderRadius: 32,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="add" size={30} color="#14170F" />
-          </LinearGradient>
-        </Pressable>
-      </Animated.View>
     </SafeAreaView>
   );
 }

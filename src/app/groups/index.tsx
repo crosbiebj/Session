@@ -73,6 +73,8 @@ export default function Groups() {
         </View>
       ) : (
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={groups ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 20, gap: 8 }}

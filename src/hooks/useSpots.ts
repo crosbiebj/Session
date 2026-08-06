@@ -16,6 +16,7 @@ export function useSpots(filters?: { lakeId?: string; swimId?: string }) {
       let query = supabase
         .from('spots')
         .select('*, lakes(id, name), swims(id, name)')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (filters?.lakeId) {
@@ -29,6 +30,22 @@ export function useSpots(filters?: { lakeId?: string; swimId?: string }) {
       if (error) throw error;
       return data as SpotWithLake[];
     },
+  });
+}
+
+export function useSpot(id: string | undefined) {
+  return useQuery({
+    queryKey: ['spots', 'detail', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('spots')
+        .select('*, lakes(id, name), swims(id, name)')
+        .eq('id', id as string)
+        .single();
+      if (error) throw error;
+      return data as SpotWithLake;
+    },
+    enabled: !!id,
   });
 }
 
@@ -80,6 +97,86 @@ export function useCreateSpot() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spots'] });
+    },
+  });
+}
+
+type UpdateSpotInput = Omit<CreateSpotInput, 'lakeId'> & { id: string };
+
+export function useUpdateSpot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateSpotInput) => {
+      const { error } = await supabase
+        .from('spots')
+        .update({
+          swim_id: input.swimId,
+          name: input.name,
+          far_bank_marker: input.farBankMarker,
+          bearing_degrees: input.bearingDegrees,
+          rod_length_ft: input.rodLengthFt,
+          distance_wraps: input.distanceWraps,
+          distance_estimate_m: input.distanceEstimateM,
+          depth_m: input.depthM,
+          bottom_type: input.bottomType,
+          notes: input.notes,
+          visibility: input.visibility,
+        })
+        .eq('id', input.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spots'] });
+    },
+  });
+}
+
+export function useDeleteSpot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('spots')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spots'] });
+      queryClient.invalidateQueries({ queryKey: ['trash'] });
+    },
+  });
+}
+
+export function useTrashedSpots() {
+  return useQuery({
+    queryKey: ['trash', 'spots'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('spots')
+        .select('*, lakes(id, name), swims(id, name)')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) throw error;
+      return data as SpotWithLake[];
+    },
+  });
+}
+
+export function useRestoreSpot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('spots').update({ deleted_at: null }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spots'] });
+      queryClient.invalidateQueries({ queryKey: ['trash'] });
     },
   });
 }
