@@ -69,30 +69,103 @@ export function useCreateGroup() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw new Error('Not signed in');
 
-      // created_by is stamped server-side by the stamp_groups_created_by
-      // trigger (supabase/migrations/20260806100000_stamp_group_created_by.sql)
-      // — not sent from the client, so it can never disagree with what
-      // groups_insert_self's RLS check compares it against. The
+      // created_by and invite_code are both stamped server-side by the
+      // stamp_created_by trigger (supabase/migrations/20260806100000_
+      // stamp_group_created_by.sql, extended in 20260806150000_
+      // group_invite_links.sql) — not sent from the client. The
       // handle_new_group trigger then auto-adds the creator as owner —
       // see supabase/migrations/20260803150000_phase1_rls_policies.sql.
       const { data, error } = await supabase.from('groups').insert({ name }).select().single();
-
-      if (error) {
-        // Temporary diagnostic (Section: measure twice, cut once) — the
-        // trigger should make created_by = auth.uid() unconditionally
-        // true, so a repeat RLS failure here means auth.uid() itself is
-        // resolving to nothing server-side despite getUser() succeeding
-        // client-side. Surfacing the client's own view of the session
-        // tells us whether that's a client auth bug or something deeper.
-        const { data: sessionData } = await supabase.auth.getSession();
-        throw new Error(
-          `${error.message} (${error.code}) — client sees user ${userData.user.id}, session present: ${!!sessionData.session}, token expires: ${sessionData.session?.expires_at ?? 'n/a'}`,
-        );
-      }
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+// The "otherwise" path (Ben: "auto join if invited, but otherwise -
+// invited party has to approve") — entering a code you weren't personally
+// handed a friends-list invite for creates a pending request rather than
+// joining outright, since a code can travel further than the owner meant.
+export function useRequestToJoinGroupByCode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error('Not signed in');
+
+      const { data: foundRaw, error: lookupError } = await supabase
+        .rpc('find_group_by_invite_code', { p_code: code.trim() })
+        .single();
+      if (lookupError || !foundRaw) throw new Error('No group found with that code.');
+      const found = foundRaw as { id: string; name: string };
+
+      const { error } = await supabase
+        .from('group_join_requests')
+        .insert({ group_id: found.id, user_id: userData.user.id });
+      if (error) {
+        if (error.code === '23505') throw new Error("You've already requested to join this group.");
+        throw error;
+      }
+      return found;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+export function usePendingJoinRequests(groupId: string | undefined) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'join-requests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('group_join_requests')
+        .select('*, requester:user_id(id, display_name)')
+        .eq('group_id', groupId as string)
+        .eq('status', 'pending')
+        .order('created_at');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!groupId,
+  });
+}
+
+export function useApproveJoinRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { requestId: string; groupId: string }) => {
+      const { error } = await supabase.rpc('approve_group_join_request', {
+        p_request_id: input.requestId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', variables.groupId, 'join-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', variables.groupId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+export function useDeclineJoinRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { requestId: string; groupId: string }) => {
+      const { error } = await supabase
+        .from('group_join_requests')
+        .update({ status: 'declined', responded_at: new Date().toISOString() })
+        .eq('id', input.requestId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', variables.groupId, 'join-requests'] });
     },
   });
 }

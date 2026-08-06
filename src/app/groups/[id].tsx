@@ -1,12 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Share, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { useFriends } from '@/hooks/useFriendships';
-import { useAddGroupMember, useGroup, useGroupMembers } from '@/hooks/useGroups';
+import {
+  useAddGroupMember,
+  useApproveJoinRequest,
+  useDeclineJoinRequest,
+  useGroup,
+  useGroupMembers,
+  usePendingJoinRequests,
+} from '@/hooks/useGroups';
 import { useAuthStore } from '@/stores/auth-store';
 
 // Member management — the missing piece that made group-owned lakes and
@@ -23,8 +30,18 @@ export default function GroupDetail() {
   const addMember = useAddGroupMember();
 
   const isOwner = members?.some((m) => m.user_id === myId && m.role === 'owner') ?? false;
+  const { data: pendingRequests } = usePendingJoinRequests(isOwner ? id : undefined);
+  const approveRequest = useApproveJoinRequest();
+  const declineRequest = useDeclineJoinRequest();
   const memberIds = new Set((members ?? []).map((m) => m.user_id));
   const addableFriends = (friends ?? []).filter((f) => f.friend && !memberIds.has(f.friend.id));
+
+  const handleShareCode = () => {
+    if (!group?.invite_code) return;
+    Share.share({
+      message: `Join "${group.name}" on (OB)Session — enter this code under Groups: ${group.invite_code}`,
+    });
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
@@ -76,35 +93,86 @@ export default function GroupDetail() {
           )}
           ListFooterComponent={
             isOwner ? (
-              <View className="mt-6 gap-2">
-                <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
-                  Add from friends
-                </Text>
-                {addableFriends.length === 0 ? (
-                  <Text className="font-sans text-sm text-dock-text-faint">
-                    All your friends are already in this group.
-                  </Text>
-                ) : (
-                  addableFriends.map((f) => (
-                    <View
-                      key={f.id}
-                      className="flex-row items-center justify-between rounded-xl bg-dock-panel px-4 py-3"
-                    >
-                      <Text className="font-sans-medium text-base text-dock-text">
-                        {f.friend?.display_name ?? 'Angler'}
-                      </Text>
-                      <AnimatedPressable
-                        onPress={() =>
-                          f.friend && addMember.mutate({ groupId: id, userId: f.friend.id })
-                        }
-                        disabled={addMember.isPending}
-                        className="rounded-full bg-dock-moss px-3 py-1.5 disabled:opacity-60"
+              <View className="mt-6 gap-6">
+                <Pressable
+                  onPress={handleShareCode}
+                  className="flex-row items-center justify-between rounded-xl bg-dock-panel px-4 py-3.5"
+                >
+                  <View>
+                    <Text className="font-label text-[10px] uppercase tracking-widest text-dock-text-faint">
+                      This group's code
+                    </Text>
+                    <Text className="mt-0.5 font-label-semibold text-lg tracking-[3px] text-dock-amber">
+                      {group?.invite_code ?? '······'}
+                    </Text>
+                  </View>
+                  <Ionicons name="share-outline" size={18} color="#5C7A4C" />
+                </Pressable>
+
+                {pendingRequests && pendingRequests.length > 0 ? (
+                  <View className="gap-2">
+                    <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+                      Requests to join
+                    </Text>
+                    {pendingRequests.map((req) => (
+                      <View
+                        key={req.id}
+                        className="flex-row items-center justify-between rounded-xl bg-dock-panel px-4 py-3"
                       >
-                        <Text className="font-sans-semibold text-xs text-dock-text">Add</Text>
-                      </AnimatedPressable>
-                    </View>
-                  ))
-                )}
+                        <Text className="font-sans-medium text-base text-dock-text">
+                          {req.requester?.display_name ?? 'Angler'}
+                        </Text>
+                        <View className="flex-row gap-2">
+                          <Pressable
+                            onPress={() => declineRequest.mutate({ requestId: req.id, groupId: id })}
+                            hitSlop={8}
+                            className="h-8 w-8 items-center justify-center rounded-full bg-white/10"
+                          >
+                            <Ionicons name="close" size={16} color="#8B9184" />
+                          </Pressable>
+                          <Pressable
+                            onPress={() => approveRequest.mutate({ requestId: req.id, groupId: id })}
+                            hitSlop={8}
+                            className="h-8 w-8 items-center justify-center rounded-full bg-dock-moss"
+                          >
+                            <Ionicons name="checkmark" size={16} color="#EDEBE0" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                <View className="gap-2">
+                  <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+                    Add from friends
+                  </Text>
+                  {addableFriends.length === 0 ? (
+                    <Text className="font-sans text-sm text-dock-text-faint">
+                      All your friends are already in this group.
+                    </Text>
+                  ) : (
+                    addableFriends.map((f) => (
+                      <View
+                        key={f.id}
+                        className="flex-row items-center justify-between rounded-xl bg-dock-panel px-4 py-3"
+                      >
+                        <Text className="font-sans-medium text-base text-dock-text">
+                          {f.friend?.display_name ?? 'Angler'}
+                        </Text>
+                        <AnimatedPressable
+                          onPress={() =>
+                            f.friend && addMember.mutate({ groupId: id, userId: f.friend.id })
+                          }
+                          disabled={addMember.isPending}
+                          className="rounded-full bg-dock-moss px-3 py-1.5 disabled:opacity-60"
+                        >
+                          <Text className="font-sans-semibold text-xs text-dock-text">Add</Text>
+                        </AnimatedPressable>
+                      </View>
+                    ))
+                  )}
+                </View>
               </View>
             ) : null
           }

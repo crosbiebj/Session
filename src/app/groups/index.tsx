@@ -15,15 +15,19 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
-import { useCreateGroup, useGroups } from '@/hooks/useGroups';
+import { useCreateGroup, useGroups, useRequestToJoinGroupByCode } from '@/hooks/useGroups';
 import { describeError } from '@/lib/errors';
 
 export default function Groups() {
   const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: groups, isLoading } = useGroups();
   const createGroup = useCreateGroup();
+  const joinByCode = useRequestToJoinGroupByCode();
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinSentTo, setJoinSentTo] = useState<string | null>(null);
   const nameInputRef = useRef<TextInput>(null);
 
   // "Create Group" from the Home dock's slide-out action lands here and
@@ -46,6 +50,22 @@ export default function Groups() {
     }
   };
 
+  // Ben: "auto join if invited, but otherwise - invited party has to
+  // approve" — a code isn't a personal invite, so this only files a
+  // request; the group owner approves it from the group's own screen.
+  const handleJoinByCode = async () => {
+    if (!joinCode.trim()) return;
+    setJoinError(null);
+    setJoinSentTo(null);
+    try {
+      const found = await joinByCode.mutateAsync(joinCode.trim());
+      setJoinCode('');
+      setJoinSentTo(found.name);
+    } catch (err) {
+      setJoinError(describeError(err));
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -65,6 +85,39 @@ export default function Groups() {
           Groups
         </Text>
         <View style={{ width: 36 }} />
+      </View>
+
+      <View className="gap-2 border-b border-dock-border px-5 py-4">
+        <Text className="font-label text-[10px] uppercase tracking-widest text-dock-text-faint">
+          Got a group's code?
+        </Text>
+        <View className="flex-row gap-2">
+          <TextInput
+            value={joinCode}
+            onChangeText={(v) => {
+              setJoinCode(v.toUpperCase());
+              setJoinSentTo(null);
+            }}
+            placeholder="Enter their invite code"
+            placeholderTextColor="#5C6154"
+            autoCapitalize="characters"
+            maxLength={6}
+            className="flex-1 rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
+          />
+          <AnimatedPressable
+            onPress={handleJoinByCode}
+            disabled={joinByCode.isPending}
+            className="items-center justify-center rounded-lg bg-dock-panel px-5 disabled:opacity-60"
+          >
+            <Text className="font-sans-semibold text-base text-dock-text">Request</Text>
+          </AnimatedPressable>
+        </View>
+        {joinError ? <Text className="font-sans text-xs text-red-400">{joinError}</Text> : null}
+        {joinSentTo ? (
+          <Text className="font-sans text-xs text-dock-moss">
+            Request sent to {joinSentTo} — the group owner needs to approve it.
+          </Text>
+        ) : null}
       </View>
 
       {isLoading ? (
