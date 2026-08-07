@@ -22,6 +22,7 @@ import { useGroups } from '@/hooks/useGroups';
 import { useDeleteLake, useLake, useShareLakeWithFriend, useUpdateLake } from '@/hooks/useLakes';
 import { useSpots } from '@/hooks/useSpots';
 import { useCreateSwim, useSwims } from '@/hooks/useSwims';
+import { useSetTargetAchieved, useTargets } from '@/hooks/useTargets';
 import { describeError } from '@/lib/errors';
 
 // "When I go to lakes, I should see my saved spots for that lake" — but
@@ -35,8 +36,10 @@ export default function LakeDetail() {
   const { data: lake, isLoading: lakeLoading } = useLake(id);
   const { data: swims, isLoading: swimsLoading } = useSwims(id);
   const { data: spots } = useSpots({ lakeId: id });
+  const { data: targets } = useTargets({ lakeId: id });
   const { data: groups } = useGroups();
   const { data: friends } = useFriends();
+  const setTargetAchieved = useSetTargetAchieved();
   const createSwim = useCreateSwim();
   const updateLake = useUpdateLake();
   const deleteLake = useDeleteLake();
@@ -290,6 +293,37 @@ export default function LakeDetail() {
                     ) : null}
                   </View>
                 )}
+
+                {targets && targets.length > 0 ? (
+                  <View className="gap-2">
+                    <Text className="font-label text-xs uppercase tracking-widest text-dock-text-faint">
+                      Your targets here
+                    </Text>
+                    {targets.map((t) => (
+                      <View
+                        key={t.id}
+                        className="flex-row items-center justify-between rounded-xl border border-dock-moss/30 bg-dock-panel px-4 py-3"
+                      >
+                        <Text className="flex-1 font-sans-medium text-sm text-dock-text">
+                          {t.name ?? t.known_fish?.name ?? t.target_sub_type?.replace('_', ' ') ?? 'Target'}
+                        </Text>
+                        <Pressable
+                          onPress={() => setTargetAchieved.mutate({ id: t.id, achieved: !t.achieved_at })}
+                          hitSlop={6}
+                          className={`rounded-full px-2.5 py-1 ${t.achieved_at ? 'bg-dock-amber/20' : 'bg-white/10'}`}
+                        >
+                          <Text
+                            className={`font-label text-[10px] uppercase tracking-wide ${
+                              t.achieved_at ? 'text-dock-amber' : 'text-dock-text-dim'
+                            }`}
+                          >
+                            {t.achieved_at ? 'Achieved' : 'Mark achieved'}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
 
                 <Text className="mt-1 font-label text-xs uppercase tracking-widest text-dock-text-faint">
                   Swims

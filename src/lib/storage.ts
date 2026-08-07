@@ -51,3 +51,35 @@ export async function getCatchPhotoSignedUrls(
   }
   return urlsByPath;
 }
+
+// Personal avatars and group banners share one bucket, split by a fixed
+// 'user/{id}/avatar.ext' or 'group/{id}/avatar.ext' path (see
+// supabase/migrations/20260807120000_avatars_storage.sql) — a fixed
+// filename per id, not timestamped, so a re-upload overwrites the same
+// object via upsert instead of leaving old ones behind.
+export async function uploadAvatar(params: {
+  scope: 'user' | 'group';
+  id: string;
+  base64: string;
+  fileExtension: string;
+}): Promise<string> {
+  const { scope, id, base64, fileExtension } = params;
+  const path = `${scope}/${id}/avatar.${fileExtension}`;
+  const contentType = fileExtension === 'jpg' ? 'image/jpeg' : `image/${fileExtension}`;
+
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, decode(base64), { contentType, upsert: true });
+
+  if (error) throw error;
+  return path;
+}
+
+const AVATAR_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h — avatars are cheap to re-sign but no need to on every render
+
+export async function getAvatarSignedUrl(path: string | null | undefined): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await supabase.storage.from('avatars').createSignedUrl(path, AVATAR_SIGNED_URL_TTL_SECONDS);
+  if (error) return null;
+  return data.signedUrl;
+}

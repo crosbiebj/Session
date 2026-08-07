@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 // Caught via the app's session:// scheme when the angler taps the email
 // confirmation link (see emailRedirectTo in sign-in.tsx). Exchanges the
@@ -17,6 +18,7 @@ export default function AuthCallback() {
     error_description?: string;
   }>();
   const [error, setError] = useState<string | null>(null);
+  const setJustSignedUp = useAuthStore((state) => state.setJustSignedUp);
 
   useEffect(() => {
     if (linkError) {
@@ -28,15 +30,22 @@ export default function AuthCallback() {
       return;
     }
 
+    // This link only ever exists because someone just finished creating an
+    // account (see emailRedirectTo in sign-in.tsx) — the app may well have
+    // been relaunched fresh from the email tap, losing whatever in-memory
+    // flag sign-in.tsx set, so it's set again here from scratch.
+    setJustSignedUp(true);
+
     supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
       if (exchangeError) {
+        setJustSignedUp(false);
         setError(exchangeError.message);
       }
       // On success the auth listener in the root layout updates the
       // session and the app redirects on its own — nothing else to do
       // here.
     });
-  }, [code, linkError]);
+  }, [code, linkError, setJustSignedUp]);
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top', 'bottom']}>

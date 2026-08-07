@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 // Mode 2 (dark, sleek, carpy) — CLAUDE.md §6a: the Book is the only
 // screen that stays warm/cream. Sign-in is the first thing anyone sees,
@@ -28,6 +29,7 @@ export default function SignIn() {
   // without this, signUp() succeeding produces no visible feedback at all
   // (no session yet, no error), which reads as the app doing nothing.
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(null);
+  const setJustSignedUp = useAuthStore((state) => state.setJustSignedUp);
 
   const handleSubmit = async () => {
     setError(null);
@@ -51,6 +53,11 @@ export default function SignIn() {
       return;
     }
 
+    // Set optimistically, before the request resolves — see auth-store.ts.
+    // Reset on failure below so a failed attempt can't send a later,
+    // unrelated sign-in through /welcome.
+    setJustSignedUp(true);
+
     const { data, error: authError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -60,6 +67,7 @@ export default function SignIn() {
     setLoading(false);
 
     if (authError) {
+      setJustSignedUp(false);
       setError(authError.message);
     } else if (!data.session) {
       // Email confirmation is required — no session yet until the link in

@@ -8,9 +8,10 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { RippleIntro } from '@/components/RippleIntro';
 import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
@@ -48,6 +49,11 @@ export default function RootLayout() {
   }, [setSession, setLoading]);
 
   const ready = (fontsLoaded || !!fontError) && !authLoading;
+  // "Something cool to make you feel like you're working with a living
+  // breathing app" — a brief ripple overlay every time the app finishes
+  // loading, unmounted once it's done rather than just faded to
+  // invisible-but-present.
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     if (ready) {
@@ -64,7 +70,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="log-catch" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
         </Stack>
+        {showIntro ? <RippleIntro onFinish={() => setShowIntro(false)} /> : null}
         <StatusBar style="light" />
       </SafeAreaProvider>
     </QueryClientProvider>

@@ -23,7 +23,7 @@ import { describeError } from '@/lib/errors';
 import type { Lake } from '@/types/database';
 
 export default function Sessions() {
-  const { add } = useLocalSearchParams<{ add?: string }>();
+  const { add, groupId } = useLocalSearchParams<{ add?: string; groupId?: string }>();
   const { data: sessions, isLoading } = useSessions();
   const { data: groups } = useGroups();
   const createSession = useCreateSession();
@@ -32,7 +32,10 @@ export default function Sessions() {
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [notes, setNotes] = useState('');
-  const [visibleToGroupId, setVisibleToGroupId] = useState<string | null>(null);
+  // Arriving from a specific group's "Plan a session" action pre-selects
+  // that group's visibility rather than defaulting to "Just me" and
+  // making the angler pick it again.
+  const [visibleToGroupId, setVisibleToGroupId] = useState<string | null>(groupId ?? null);
   const [error, setError] = useState<string | null>(null);
 
   const handleAdd = async () => {

@@ -39,6 +39,29 @@ export function useUpcomingSessions(limit = 5) {
   });
 }
 
+// The group-scoped counterpart to useUpcomingSessions — Ben: "I want to
+// book my sessions and see who is going to come with me." Booking already
+// existed (the "Visible to" picker on the create form); this is the
+// missing aggregated view showing everyone's shared sessions together,
+// not just your own plus a stray mention elsewhere.
+export function useGroupSessions(groupId: string | undefined) {
+  return useQuery({
+    queryKey: ['sessions', 'group', groupId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, lakes(name), owner:owner_id(id, display_name)')
+        .eq('visible_to_group_id', groupId as string)
+        .is('deleted_at', null)
+        .gte('planned_end', new Date().toISOString())
+        .order('planned_start', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!groupId,
+  });
+}
+
 export function useSession(id: string | undefined) {
   return useQuery({
     queryKey: ['sessions', 'detail', id],

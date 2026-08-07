@@ -9,9 +9,9 @@ import type { Spot, SpotWithLake } from '@/types/database';
 // all my spots there"); both omitted is every spot the angler can see,
 // newest first, across all lakes (Spots page). RLS (can_view_spot) does
 // the access scoping regardless of filter.
-export function useSpots(filters?: { lakeId?: string; swimId?: string }) {
+export function useSpots(filters?: { lakeId?: string; swimId?: string; groupId?: string }) {
   return useQuery({
-    queryKey: ['spots', filters?.lakeId ?? 'all', filters?.swimId ?? 'all'],
+    queryKey: ['spots', filters?.lakeId ?? 'all', filters?.swimId ?? 'all', filters?.groupId ?? 'all'],
     queryFn: async () => {
       let query = supabase
         .from('spots')
@@ -24,6 +24,20 @@ export function useSpots(filters?: { lakeId?: string; swimId?: string }) {
       }
       if (filters?.swimId) {
         query = query.eq('swim_id', filters.swimId);
+      }
+      if (filters?.groupId) {
+        // No !inner join filtering on a to-many embed via PostgREST dot
+        // notation here — simplest is resolving the group's own lake ids
+        // first, same two-step shape the group hub screen would otherwise
+        // have to do itself.
+        const { data: groupLakes, error: lakesError } = await supabase
+          .from('lakes')
+          .select('id')
+          .eq('group_id', filters.groupId);
+        if (lakesError) throw lakesError;
+        const lakeIds = (groupLakes ?? []).map((l) => l.id);
+        if (lakeIds.length === 0) return [] as SpotWithLake[];
+        query = query.in('lake_id', lakeIds);
       }
 
       const { data, error } = await query;

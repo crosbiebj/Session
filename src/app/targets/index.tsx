@@ -15,10 +15,11 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LakePicker } from '@/components/LakePicker';
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
 import { TargetPhotoPicker } from '@/components/TargetPhotoPicker';
 import { useCreateTarget, useTargets } from '@/hooks/useTargets';
-import type { FishSubType } from '@/types/database';
+import type { FishSubType, Lake } from '@/types/database';
 
 const SUB_TYPES: FishSubType[] = [
   'common',
@@ -38,29 +39,46 @@ export default function Targets() {
   const { add } = useLocalSearchParams<{ add?: string }>();
   const { data: targets, isLoading } = useTargets();
   const createTarget = useCreateTarget();
+  const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [subType, setSubType] = useState<FishSubType | null>(null);
   const [showAdd, setShowAdd] = useState(add === '1');
   const [photoId, setPhotoId] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [lake, setLake] = useState<Lake | null>(null);
 
+  // "All target fish will be named, even if it's just 'the big common'" —
+  // name is the one required field now; sub-type stays an optional
+  // refinement alongside it rather than standing in for a name itself.
   const handleAdd = async () => {
-    if (!notes.trim() && !subType) return;
+    if (!name.trim()) return;
     await createTarget.mutateAsync({
-      lakeId: null,
+      name: name.trim(),
+      lakeId: lake?.id ?? null,
       targetSubType: subType,
       notes: notes.trim() || null,
       referencePhotoId: photoId,
     });
+    setName('');
     setNotes('');
     setSubType(null);
     setPhotoId(null);
     setPhotoUrl(null);
+    setLake(null);
     setShowAdd(false);
   };
 
   const addForm = (
     <View className="gap-3 border-b border-dock-moss/30 px-5 py-4">
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Name this target — e.g. Petals, or The Big Common"
+        placeholderTextColor="#5C6154"
+        returnKeyType="next"
+        className="rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
+      />
+      <LakePicker selectedLake={lake} onSelect={setLake} variant="dock" />
       <View className="flex-row flex-wrap gap-2">
         {SUB_TYPES.map((t) => (
           <Pressable
@@ -83,7 +101,7 @@ export default function Targets() {
       <TextInput
         value={notes}
         onChangeText={setNotes}
-        placeholder="e.g. 30lb+ from Broom, or a named fish"
+        placeholder="Notes — e.g. 30lb+, last seen near the island"
         placeholderTextColor="#5C6154"
         returnKeyType="done"
         className="rounded-lg bg-dock-panel px-4 py-3 font-sans text-base text-dock-text"
@@ -98,7 +116,7 @@ export default function Targets() {
       />
       <AnimatedPressable
         onPress={handleAdd}
-        disabled={createTarget.isPending}
+        disabled={createTarget.isPending || !name.trim()}
         className="items-center rounded-lg bg-dock-amber py-3 disabled:opacity-60"
       >
         <Text className="font-label-semibold text-sm uppercase tracking-wide text-dock-bg">
@@ -180,7 +198,7 @@ export default function Targets() {
                 <View className="flex-1">
                   <View className="flex-row items-center justify-between">
                     <Text className="font-label-semibold text-xs uppercase tracking-widest text-dock-amber">
-                      {item.known_fish?.name ?? item.target_sub_type?.replace('_', ' ') ?? 'Target'}
+                      {item.name ?? item.known_fish?.name ?? item.target_sub_type?.replace('_', ' ') ?? 'Target'}
                     </Text>
                     {item.achieved_at ? (
                       <Text className="font-label text-[10px] uppercase tracking-wide text-dock-moss">
@@ -188,6 +206,11 @@ export default function Targets() {
                       </Text>
                     ) : null}
                   </View>
+                  {item.name && item.target_sub_type ? (
+                    <Text className="mt-0.5 font-sans text-xs capitalize text-dock-text-faint">
+                      {item.target_sub_type.replace('_', ' ')}
+                    </Text>
+                  ) : null}
                   {item.notes ? (
                     <Text className="mt-1 font-sans text-sm text-dock-text-dim">{item.notes}</Text>
                   ) : null}

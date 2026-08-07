@@ -9,15 +9,15 @@ import type { Lake } from '@/types/database';
 // — the restrictive RLS policy still lets the owner see their own for
 // the trash screen, so this app-level filter is what actually hides it
 // from the everyday list.
-export function useLakes() {
+export function useLakes(filters?: { groupId?: string }) {
   return useQuery({
-    queryKey: ['lakes'],
+    queryKey: ['lakes', filters?.groupId ?? 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lakes')
-        .select('*')
-        .is('deleted_at', null)
-        .order('name');
+      let query = supabase.from('lakes').select('*').is('deleted_at', null).order('name');
+      if (filters?.groupId) {
+        query = query.eq('group_id', filters.groupId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Lake[];
     },

@@ -159,13 +159,16 @@ export default function Friends() {
             </Text>
           }
           renderItem={({ item, index }) => (
-            <Animated.View
-              entering={FadeInDown.duration(300).delay(Math.min(index, 8) * 30)}
-              className="rounded-xl bg-dock-panel px-4 py-3.5"
-            >
-              <Text className="font-sans-medium text-base text-dock-text">
-                {item.friend?.display_name ?? 'Angler'}
-              </Text>
+            <Animated.View entering={FadeInDown.duration(300).delay(Math.min(index, 8) * 30)}>
+              <Pressable
+                onPress={() => item.friend && router.push(`/friends/${item.friend.id}`)}
+                className="flex-row items-center justify-between rounded-xl bg-dock-panel px-4 py-3.5 active:opacity-70"
+              >
+                <Text className="font-sans-medium text-base text-dock-text">
+                  {item.friend?.display_name ?? 'Angler'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#5C6154" />
+              </Pressable>
             </Animated.View>
           )}
         />

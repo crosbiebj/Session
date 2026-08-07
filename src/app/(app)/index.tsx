@@ -15,10 +15,12 @@ import { useCatchCount } from '@/hooks/useCatchCount';
 import { useFriends, useIncomingFriendRequests, useRespondToFriendRequest } from '@/hooks/useFriendships';
 import { useGroups } from '@/hooks/useGroups';
 import { useLakes } from '@/hooks/useLakes';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useSessions } from '@/hooks/useSessions';
 import { useSpots } from '@/hooks/useSpots';
 import { useSetTargetAchieved, useTargets } from '@/hooks/useTargets';
 import { useTickets, useUpdateTicketStatus } from '@/hooks/useTickets';
+import { useRecentsStore } from '@/stores/recents-store';
 
 export default function Home() {
   // The tab bar is absolutely positioned (frosted-glass, floats over
@@ -38,11 +40,43 @@ export default function Home() {
   const setTargetAchieved = useSetTargetAchieved();
   const updateTicketStatus = useUpdateTicketStatus();
   const respondToRequest = useRespondToFriendRequest();
+  const recentSpotIds = useRecentsStore((state) => state.recentSpotIds);
+  const notifications = useNotifications();
+  const unreadCount = (notifications.data ?? []).filter((n) => !n.read_at).length;
+
+  // "I'd like it to be closer to hand and not have to go into the spot
+  // page each time" — the dock's peek shows whichever spots were opened
+  // most recently, not just whichever were saved most recently. Sort is
+  // stable, so ties (nothing in the recents list yet) keep the query's
+  // own newest-first order.
+  const recentSpots = spots.data
+    ? [...spots.data].sort((a, b) => {
+        const aIdx = recentSpotIds.indexOf(a.id);
+        const bIdx = recentSpotIds.indexOf(b.id);
+        if (aIdx === -1 && bIdx === -1) return 0;
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return -1;
+        return aIdx - bIdx;
+      })
+    : [];
 
   return (
     <SafeAreaView className="flex-1 bg-dock-bg" edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }}>
         <View className="px-5 pt-6">
+          <View className="mb-3 flex-row justify-end">
+            <Pressable
+              onPress={() => router.push('/notifications')}
+              hitSlop={10}
+              className="h-9 w-9 items-center justify-center rounded-full bg-white/[0.07]"
+            >
+              <Ionicons name="notifications-outline" size={18} color="#8B9184" />
+              {unreadCount > 0 ? (
+                <View className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-dock-amber" />
+              ) : null}
+            </Pressable>
+          </View>
+
           {/* "Your Book" hero — the one warm/tactile exception in Mode 2
               (CLAUDE.md §3, Home screen). A soft gradient instead of a
               flat fill gives it real surface depth rather than a pasted-on
@@ -117,7 +151,7 @@ export default function Home() {
               elevation: 4,
             }}
           >
-            <DockRow icon="stats-chart" label="Stats" count={0} route="/stats">
+            <DockRow icon="stats-chart" label="Stats" route="/stats">
               {catchCount.isLoading || sessions.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
               ) : (
@@ -135,7 +169,6 @@ export default function Home() {
             <DockRow
               icon="locate"
               label="Targets"
-              count={targets.data?.length ?? 0}
               route="/targets"
               addRoute="/targets?add=1"
               addLabel="Add Target"
@@ -149,7 +182,7 @@ export default function Home() {
                   {targets.data.slice(0, 3).map((t) => (
                     <View key={t.id} className="flex-row items-center justify-between gap-2">
                       <Text className="flex-1 font-sans text-sm text-dock-text-dim">
-                        {t.known_fish?.name ?? t.target_sub_type ?? 'Target'}
+                        {t.name ?? t.known_fish?.name ?? t.target_sub_type ?? 'Target'}
                         {t.lakes?.name ? ` · ${t.lakes.name}` : ''}
                       </Text>
                       <Pressable
@@ -176,7 +209,6 @@ export default function Home() {
             <DockRow
               icon="calendar"
               label="Sessions"
-              count={sessions.data?.length ?? 0}
               route="/sessions"
               addRoute="/sessions?add=1"
               addLabel="Plan Session"
@@ -207,7 +239,6 @@ export default function Home() {
             <DockRow
               icon="people"
               label="Groups"
-              count={groups.data?.length ?? 0}
               route="/groups"
               addRoute="/groups?add=1"
               addLabel="Create Group"
@@ -232,7 +263,6 @@ export default function Home() {
             <DockRow
               icon="water"
               label="Favourite Lakes"
-              count={lakes.data?.length ?? 0}
               route="/lakes"
               addRoute="/lakes?add=1"
               addLabel="Add Lake"
@@ -257,7 +287,6 @@ export default function Home() {
             <DockRow
               icon="navigate"
               label="Spots"
-              count={spots.data?.length ?? 0}
               route="/spots"
               addRoute="/spots?add=1"
               addLabel="Add Spot"
@@ -266,13 +295,15 @@ export default function Home() {
             >
               {spots.isLoading ? (
                 <ActivityIndicator color="#5C7A4C" />
-              ) : spots.data && spots.data.length > 0 ? (
+              ) : recentSpots.length > 0 ? (
                 <View className="gap-1.5">
-                  {spots.data.slice(0, 3).map((s) => (
-                    <Text key={s.id} className="font-sans text-sm text-dock-text-dim">
-                      {s.name ?? s.swims?.name ?? 'Spot'}
-                      {s.lakes?.name ? ` · ${s.lakes.name}` : ''}
-                    </Text>
+                  {recentSpots.slice(0, 3).map((s) => (
+                    <Pressable key={s.id} onPress={() => router.push(`/spots/${s.id}`)} scaleTo={0.98}>
+                      <Text className="font-sans text-sm text-dock-text-dim">
+                        {s.name ?? s.swims?.name ?? 'Spot'}
+                        {s.lakes?.name ? ` · ${s.lakes.name}` : ''}
+                      </Text>
+                    </Pressable>
                   ))}
                 </View>
               ) : (
@@ -283,7 +314,6 @@ export default function Home() {
             <DockRow
               icon="ticket"
               label="Syndicate Tickets"
-              count={tickets.data?.length ?? 0}
               route="/tickets"
               addRoute="/tickets?add=1"
               addLabel="Add Ticket"
@@ -330,7 +360,6 @@ export default function Home() {
             <DockRow
               icon="person-add"
               label="Friends"
-              count={incomingRequests.data?.length || friends.data?.length || 0}
               route="/friends"
               addRoute="/friends?add=1"
               addLabel="Add Friend"

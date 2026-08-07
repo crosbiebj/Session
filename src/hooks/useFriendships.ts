@@ -71,6 +71,51 @@ export function useIncomingFriendRequests() {
   });
 }
 
+// friendships_delete already lets either party unfriend at will — this
+// just resolves "the friendship row between me and them" first, since the
+// caller only knows the other person's user id, not the friendship row id.
+export function useRemoveFriend() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (friendUserId: string) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error('Not signed in');
+      const myId = userData.user.id;
+
+      const { error } = await supabase
+        .from('friendships')
+        .delete()
+        .or(
+          `and(requester_id.eq.${myId},addressee_id.eq.${friendUserId}),and(requester_id.eq.${friendUserId},addressee_id.eq.${myId})`,
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['friendships'] });
+    },
+  });
+}
+
+// block_user (Section 3, punch list: "no option to remove/block people")
+// drops any existing friendship and records the block atomically — see
+// supabase/migrations/20260807100000_profile_targets_blocking.sql. Doesn't
+// yet strip a blocked person's existing access to a shared group/lake
+// they were already in — only stops new friend requests between the two.
+export function useBlockUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc('block_user', { p_user_id: userId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['friendships'] });
+    },
+  });
+}
+
 export function useRespondToFriendRequest() {
   const queryClient = useQueryClient();
 

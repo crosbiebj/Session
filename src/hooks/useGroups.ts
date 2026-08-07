@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { getAvatarSignedUrl, uploadAvatar } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
 export function useGroups() {
@@ -22,9 +23,36 @@ export function useGroup(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase.from('groups').select('*').eq('id', id as string).single();
       if (error) throw error;
-      return data;
+      const avatarSignedUrl = await getAvatarSignedUrl(data.avatar_url);
+      return { ...data, avatarSignedUrl };
     },
     enabled: !!id,
+  });
+}
+
+// Owner-only, enforced by the avatars_storage_insert/update RLS policy —
+// see supabase/migrations/20260807120000_avatars_storage.sql. Ben: "we
+// have our own group icon... we'd like to have that at the top of the
+// group page as a banner."
+export function useUpdateGroupAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { groupId: string; base64: string; fileExtension: string }) => {
+      const path = await uploadAvatar({
+        scope: 'group',
+        id: input.groupId,
+        base64: input.base64,
+        fileExtension: input.fileExtension,
+      });
+
+      const { error } = await supabase.from('groups').update({ avatar_url: path }).eq('id', input.groupId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
   });
 }
 

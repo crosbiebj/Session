@@ -21,6 +21,7 @@ import { SwimPicker } from '@/components/SwimPicker';
 import { useFriends } from '@/hooks/useFriendships';
 import { useDeleteSpot, useShareSpotWithFriend, useSpot, useUpdateSpot } from '@/hooks/useSpots';
 import { describeError } from '@/lib/errors';
+import { useRecentsStore } from '@/stores/recents-store';
 import type { Swim } from '@/types/database';
 
 type ShareMode = 'private' | 'friend' | 'group';
@@ -35,6 +36,11 @@ export default function SpotDetail() {
   const updateSpot = useUpdateSpot();
   const deleteSpot = useDeleteSpot();
   const shareSpot = useShareSpotWithFriend();
+  const touchSpot = useRecentsStore((state) => state.touchSpot);
+
+  useEffect(() => {
+    if (id) touchSpot(id);
+  }, [id, touchSpot]);
 
   const [swim, setSwim] = useState<Swim | null>(null);
   const [name, setName] = useState('');

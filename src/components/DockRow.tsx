@@ -17,7 +17,6 @@ import { Pressable } from '@/components/Pressable';
 type DockRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  count: number;
   route: string;
   // When both are given, the expanded accordion gets a small tray of
   // circular icon buttons (add / view) above the preview content — part
@@ -43,7 +42,6 @@ type DockRowProps = {
 export function DockRow({
   icon,
   label,
-  count,
   route,
   addRoute,
   addLabel,
@@ -75,7 +73,10 @@ export function DockRow({
           hitSlop={8}
           className="h-11 w-11 items-center justify-center"
         >
-          <View className="h-9 w-9 items-center justify-center rounded-full bg-white/[0.07]">
+          <View
+            className="h-10 w-10 items-center justify-center rounded-full bg-dock-moss/15"
+            style={{ borderWidth: 1, borderColor: '#5C7A4C4D' }}
+          >
             <Ionicons name={icon} size={19} color="#5C7A4C" />
           </View>
         </Pressable>
@@ -86,9 +87,6 @@ export function DockRow({
           className="flex-1 flex-row items-center gap-3 py-3.5 pl-1 pr-4"
         >
           <Text className="flex-1 font-sans-medium text-base text-dock-text">{label}</Text>
-          {count > 0 ? (
-            <Text className="font-label text-xs text-dock-amber">{count}</Text>
-          ) : null}
           <Animated.View style={chevronStyle}>
             <Ionicons name="chevron-down" size={18} color="#5C6154" />
           </Animated.View>

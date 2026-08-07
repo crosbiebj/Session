@@ -4,14 +4,20 @@ import { getCatchPhotoSignedUrls } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import type { FishSubType } from '@/types/database';
 
-export function useTargets() {
+export function useTargets(filters?: { lakeId?: string }) {
   return useQuery({
-    queryKey: ['targets'],
+    queryKey: ['targets', filters?.lakeId ?? 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('targets')
         .select('*, lakes(name), known_fish(name), reference_photo:reference_photo_id(id, storage_path_display)')
         .order('created_at', { ascending: false });
+
+      if (filters?.lakeId) {
+        query = query.eq('lake_id', filters.lakeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       const paths = (data ?? [])
@@ -34,6 +40,7 @@ export function useCreateTarget() {
 
   return useMutation({
     mutationFn: async (input: {
+      name: string;
       lakeId: string | null;
       targetSubType: FishSubType | null;
       notes: string | null;
@@ -46,6 +53,7 @@ export function useCreateTarget() {
         .from('targets')
         .insert({
           owner_id: userData.user.id,
+          name: input.name,
           lake_id: input.lakeId,
           target_sub_type: input.targetSubType,
           notes: input.notes,
