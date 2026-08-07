@@ -83,3 +83,33 @@ export async function getAvatarSignedUrl(path: string | null | undefined): Promi
   if (error) return null;
   return data.signedUrl;
 }
+
+// "Whip out my ticket for the bailiff" — quality stays high (no
+// compression down to catch-photo levels) since a blurry QR just doesn't
+// scan. Path '{owner_id}/{ticket_id}.ext', same idiom as catch-photos.
+export async function uploadTicketQrCode(params: {
+  ownerId: string;
+  ticketId: string;
+  base64: string;
+  fileExtension: string;
+}): Promise<string> {
+  const { ownerId, ticketId, base64, fileExtension } = params;
+  const path = `${ownerId}/${ticketId}.${fileExtension}`;
+  const contentType = fileExtension === 'jpg' ? 'image/jpeg' : `image/${fileExtension}`;
+
+  const { error } = await supabase.storage
+    .from('ticket-qr-codes')
+    .upload(path, decode(base64), { contentType, upsert: true });
+
+  if (error) throw error;
+  return path;
+}
+
+export async function getTicketQrSignedUrl(path: string | null | undefined): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await supabase.storage
+    .from('ticket-qr-codes')
+    .createSignedUrl(path, AVATAR_SIGNED_URL_TTL_SECONDS);
+  if (error) return null;
+  return data.signedUrl;
+}

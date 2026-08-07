@@ -56,3 +56,24 @@ export async function pickAvatarPhoto(): Promise<PickedPhoto | null> {
   const fileExtension = (extensionMatch?.[1] ?? 'jpg').toLowerCase();
   return { uri: asset.uri, base64: asset.base64 as string, fileExtension };
 }
+
+// A ticket's QR code screenshot — no forced crop (a syndicate's QR often
+// sits above a membership number worth keeping in frame) and high
+// quality, since a compressed-to-mush QR just won't scan for the
+// bailiff.
+export async function pickQrCodePhoto(): Promise<PickedPhoto | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 0.95,
+    base64: true,
+  });
+
+  if (result.canceled || !result.assets[0]?.base64) {
+    return null;
+  }
+
+  const asset = result.assets[0];
+  const extensionMatch = asset.fileName?.match(/\.(\w+)$/) ?? asset.uri.match(/\.(\w+)$/);
+  const fileExtension = (extensionMatch?.[1] ?? 'jpg').toLowerCase();
+  return { uri: asset.uri, base64: asset.base64 as string, fileExtension };
+}

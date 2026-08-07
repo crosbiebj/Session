@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { getTicketQrSignedUrl, uploadTicketQrCode } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
 export function useTickets() {
@@ -27,9 +28,37 @@ export function useTicket(id: string | undefined) {
         .eq('id', id as string)
         .single();
       if (error) throw error;
-      return data;
+      const qrSignedUrl = await getTicketQrSignedUrl(data.qr_code_path);
+      return { ...data, qrSignedUrl };
     },
     enabled: !!id,
+  });
+}
+
+// "Whip out my ticket for the bailiff" — a screenshot of whatever QR the
+// syndicate already issues, attached to the matching ticket.
+export function useUpdateTicketQrCode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { ticketId: string; base64: string; fileExtension: string }) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error('Not signed in');
+
+      const path = await uploadTicketQrCode({
+        ownerId: userData.user.id,
+        ticketId: input.ticketId,
+        base64: input.base64,
+        fileExtension: input.fileExtension,
+      });
+
+      const { error } = await supabase.from('tickets').update({ qr_code_path: path }).eq('id', input.ticketId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tickets', 'detail', variables.ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
   });
 }
 

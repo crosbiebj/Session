@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,8 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { pickQrCodePhoto } from '@/components/PhotoPicker';
 import { Pressable as AnimatedPressable } from '@/components/Pressable';
-import { useDeleteTicket, useTicket, useUpdateTicket } from '@/hooks/useTickets';
+import { useDeleteTicket, useTicket, useUpdateTicket, useUpdateTicketQrCode } from '@/hooks/useTickets';
 import { describeError } from '@/lib/errors';
 
 export default function TicketDetail() {
@@ -23,12 +26,14 @@ export default function TicketDetail() {
   const { data: ticket, isLoading } = useTicket(id);
   const updateTicket = useUpdateTicket();
   const deleteTicket = useDeleteTicket();
+  const updateQrCode = useUpdateTicketQrCode();
 
   const [syndicateName, setSyndicateName] = useState('');
   const [status, setStatus] = useState<'held' | 'wanted'>('wanted');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     if (ticket) {
@@ -52,6 +57,22 @@ export default function TicketDetail() {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
+    } catch (err) {
+      setError(describeError(err));
+    }
+  };
+
+  const handlePickQr = async () => {
+    if (!ticket) return;
+    const photo = await pickQrCodePhoto();
+    if (!photo) return;
+    setError(null);
+    try {
+      await updateQrCode.mutateAsync({
+        ticketId: ticket.id,
+        base64: photo.base64,
+        fileExtension: photo.fileExtension,
+      });
     } catch (err) {
       setError(describeError(err));
     }
@@ -147,6 +168,46 @@ export default function TicketDetail() {
               style={{ minHeight: 90, textAlignVertical: 'top' }}
             />
 
+            {/* "Whip out my ticket for the bailiff" — a screenshot of
+                whatever QR the syndicate already issues, shown big and
+                fast when it actually matters (someone standing at your
+                swim), not buried behind more taps than Show → done. */}
+            {ticket.qrSignedUrl ? (
+              <View className="gap-2 rounded-xl bg-dock-panel p-3">
+                <Pressable
+                  onPress={() => setShowQr(true)}
+                  className="flex-row items-center gap-3 active:opacity-70"
+                >
+                  <Image source={{ uri: ticket.qrSignedUrl }} className="h-14 w-14 rounded-lg bg-white" />
+                  <View className="flex-1">
+                    <Text className="font-sans-semibold text-sm text-dock-amber">Show QR Code</Text>
+                    <Text className="mt-0.5 font-sans text-xs text-dock-text-faint">Tap to go full-screen</Text>
+                  </View>
+                  <Ionicons name="expand-outline" size={16} color="#5C6154" />
+                </Pressable>
+                <Pressable onPress={handlePickQr} disabled={updateQrCode.isPending} className="items-center py-1">
+                  <Text className="font-sans text-xs text-dock-text-dim">
+                    {updateQrCode.isPending ? 'Uploading…' : 'Replace photo'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={handlePickQr}
+                disabled={updateQrCode.isPending}
+                className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-dock-border py-4"
+              >
+                {updateQrCode.isPending ? (
+                  <ActivityIndicator color="#5C7A4C" />
+                ) : (
+                  <>
+                    <Ionicons name="qr-code-outline" size={18} color="#8B9184" />
+                    <Text className="font-sans-medium text-sm text-dock-text-dim">Add QR code</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+
             {error ? <Text className="font-sans text-xs text-red-400">{error}</Text> : null}
 
             <AnimatedPressable
@@ -165,6 +226,25 @@ export default function TicketDetail() {
           </ScrollView>
         )}
       </KeyboardAvoidingView>
+
+      {/* White background, not the app's dark theme — max contrast and
+          brightness for a scanner, and reads unmistakably as "this is
+          the ticket" the moment it's held up. */}
+      <Modal visible={showQr} animationType="fade" onRequestClose={() => setShowQr(false)}>
+        <Pressable
+          onPress={() => setShowQr(false)}
+          className="flex-1 items-center justify-center bg-white px-10"
+        >
+          {ticket?.qrSignedUrl ? (
+            <Image
+              source={{ uri: ticket.qrSignedUrl }}
+              style={{ width: '100%', aspectRatio: 1 }}
+              resizeMode="contain"
+            />
+          ) : null}
+          <Text className="mt-6 font-sans text-sm text-black/40">Tap anywhere to close</Text>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
